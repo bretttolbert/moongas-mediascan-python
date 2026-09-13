@@ -221,7 +221,7 @@ def parse_args():
         dest="ignore_existing",
         action="store_false",
         default=True,
-        help="Overwrite existing destination files (default: skip existing).",
+        help="Overwrite existing destination files (if newer in source) (default: skip existing).",
     )
     parser.add_argument(
         "--dir-copy-mode",
