@@ -66,12 +66,15 @@ def copy_medialib(
 
     for root, dirs, files in os.walk(src_path, topdown=False):
         for src_fname in files:
+            src_file_abs_path = Path(root).joinpath(src_fname)
             # skip any files not specifically included
             if src_fname not in include_filenames:
+                print(
+                    f"Skipping file '{src_file_abs_path}' because its filename is not included"
+                )
                 ret = ret._replace(skipped=ret.skipped + 1)
                 continue
             # skip files with any exclude keywords anywhere in the file path
-            src_file_abs_path = Path(root).joinpath(src_fname)
             skip = False
             for keyword in exclude_keywords:
                 if str(src_file_abs_path).find(keyword) != -1:
@@ -100,6 +103,10 @@ def copy_medialib(
                 dst_abs_path.exists()
                 and dst_abs_path.stat().st_mtime > src_file_abs_path.stat().st_mtime
             ):
+                print(
+                    f"Skipping file '{src_file_abs_path}' because the destination file "
+                    f"'{dst_abs_path}' is newer"
+                )
                 ret = ret._replace(skipped=ret.skipped + 1)
                 continue
 
@@ -115,6 +122,10 @@ def copy_medialib(
                     dst_fbase, _ = os.path.splitext(dst_abs_path)
                     dst_abs_path_converted = Path(dst_fbase + ".webp")
                     if dst_abs_path_converted.exists() and ignore_existing:
+                        print(
+                            f"Skipping file '{src_file_abs_path}' because the converted "
+                            f"destination file '{dst_abs_path_converted}' already exists"
+                        )
                         ret = ret._replace(skipped=ret.skipped + 1)
                         continue
 
@@ -123,6 +134,10 @@ def copy_medialib(
                     ret = ret._replace(actually_copied=ret.actually_copied + 1)
                 ret = ret._replace(would_be_copied=ret.would_be_copied + 1)
             else:
+                print(
+                    f"Skipping file '{src_file_abs_path}' because the destination file "
+                    f"'{dst_abs_path}' already exists"
+                )
                 ret = ret._replace(skipped=ret.skipped + 1)
     return ret
 

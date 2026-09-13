@@ -1,6 +1,8 @@
 from pathlib import Path
 import os
 
+import pytest
+
 from scripts.copy_medialib import (
     copy_medialib,
     copy_medialibs,
@@ -30,7 +32,9 @@ def test_copy_all(tmp_path: Path):
     copy_medialibs([src_path1, src_path2], dst_path)
 
 
-def test_copy_medialib_does_not_overwrite_newer_destination(tmp_path: Path) -> None:
+def test_copy_medialib_does_not_overwrite_newer_destination(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     src_path = tmp_path / "src"
     dst_path = tmp_path / "dst"
     src_path.mkdir()
@@ -49,8 +53,14 @@ def test_copy_medialib_does_not_overwrite_newer_destination(tmp_path: Path) -> N
         ignore_existing=False,
     )
 
-    assert count == 0
+    assert count.skipped == 1
+    assert count.actually_copied == 0
     assert dst_file.read_text() == "newer destination"
+    captured = capsys.readouterr()
+    assert (
+        f"Skipping file '{src_file}' because the destination file '{dst_file}' is newer"
+        in captured.out
+    )
 
 
 def test_copy_medialib_overwrites_older_destination(tmp_path: Path) -> None:
@@ -72,7 +82,8 @@ def test_copy_medialib_overwrites_older_destination(tmp_path: Path) -> None:
         ignore_existing=False,
     )
 
-    assert count == 1
+    assert count.actually_copied == 1
+    assert count.skipped == 0
     assert dst_file.read_text() == "source"
 
 
