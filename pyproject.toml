@@ -63,6 +63,10 @@ stats = [
   "numpy>=2.2.6 ; python_version < '3.12'",
   "numpy>=2.5.2 ; python_version >= '3.12'",
 ]
+llm = [
+    "openai>=3.13.0",
+    "PyYAML>=6.0.3",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/bretttolbert/moongas-py-mediascan"

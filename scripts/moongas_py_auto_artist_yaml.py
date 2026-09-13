@@ -1,0 +1,368 @@
+"""
+Usage: python scripts/moongas_py_auto_artist_yaml.py [options]
+
+MOONGAS_COLLECTION_ROOTDIR=$MOONGAS_COLLECTION_DEMO python moongas_py_auto_artist_yaml.py
+
+MOONGAS_COLLECTION_ROOTDIR=$MOONGAS_COLLECTION_DEMO python moongas_py_auto_artist_yaml.py --clean
+
+"""
+
+import argparse
+import os
+import logging
+from pathlib import Path
+import random
+import shutil
+import tempfile
+import time
+
+import yaml
+from openai import APIStatusError, OpenAI
+
+# Configure with LOG_LEVEL=DEBUG for additional diagnostic detail.
+logging.basicConfig(
+    level=getattr(logging, os.environ.get("LOG_LEVEL", "INFO").upper(), logging.INFO),
+    format="%(asctime)s %(levelname)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+LETTER_DIRS_FOR_REFERENCE_EXAMPLES = ["A"]
+
+LETTER_DIRS_NEEDING_WORK = [
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "U",
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z",
+]
+
+assert not (
+    set(LETTER_DIRS_FOR_REFERENCE_EXAMPLES) & set(LETTER_DIRS_NEEDING_WORK)
+), "Reference examples and needing work arrays intersect!"
+
+# Configure an OpenAI-compatible provider. LLM_* variables take precedence;
+# the GITHUB_* variables remain supported for existing GitHub Models setups.
+BASE_URL = os.environ.get(
+    "LLM_BASE_URL",
+    os.environ.get("GITHUB_MODELS_BASE_URL", "https://models.github.ai/inference"),
+)
+MODEL_NAME = os.environ.get(
+    "LLM_MODEL", os.environ.get("GITHUB_MODEL", "openai/gpt-4o-mini")
+)
+SLEEP_BETWEEN_FILES = int(os.environ.get("SLEEP_BETWEEN_FILES", "30"))
+api_key = os.environ.get(
+    "LLM_API_KEY", os.environ.get("GITHUB_TOKEN", os.environ.get("OPENAI_API_KEY"))
+)
+client = OpenAI(base_url=BASE_URL, api_key=api_key)
+
+# Train on all existing artist.yaml files.
+MOONGAS_COLLECTION_ROOTDIR = os.environ.get(
+    "MOONGAS_COLLECTION_ROOTDIR", "../../moongas-collection-demo/data"
+)
+
+# Define strict system instructions to prevent conversational text in the response
+SYSTEM_PROMPT = """You are an automated data-filling assistant. 
+Your job is to read the provided incomplete YAML file and fill in the missing values or inferred fields.
+Maintain the exact schema. Return ONLY the valid YAML content. 
+Do not include markdown code blocks (like ```yaml), explanations, or opening/closing text."""
+
+
+def load_reference_examples(letters_dirs_to_work: list[str]) -> str:
+    """Load complete YAML files that demonstrate the desired output format.
+    Currently it recursively loads all artist.yaml files under the EXAMPLES_ROOTDIR
+    Only files named "artist.yml" in directories starting with "A" are considered.
+    This avoids maximum context length issues by limiting the number of examples loaded.
+    Also the ones starting with the letter 'A' are considered the primary examples
+    because I tagged them semi-manually using Copilot Chat first.
+    """
+    if not os.path.isdir(MOONGAS_COLLECTION_ROOTDIR):
+        logger.warning(
+            "Reference examples directory not found: %s", MOONGAS_COLLECTION_ROOTDIR
+        )
+        return ""
+
+    example_paths = [
+        os.path.join(root, filename)
+        for root, _, filenames in os.walk(MOONGAS_COLLECTION_ROOTDIR)
+        for filename in filenames
+        if filename == "artist.yml"
+        and os.path.basename(root)[0] in letters_dirs_to_work
+    ]
+
+    examples: list[str] = []
+    for example_path in sorted(example_paths):
+        filename = os.path.relpath(example_path, MOONGAS_COLLECTION_ROOTDIR)
+        with open(example_path, "r", encoding="utf-8") as f:
+            examples.append(f"Example: {filename}\n{f.read()}")
+
+    logger.info(
+        "Loaded %d reference example(s) from %s",
+        len(examples),
+        MOONGAS_COLLECTION_ROOTDIR,
+    )
+    reference_text = "\n\n".join(examples)
+    logger.info("Reference example content size: %d characters", len(reference_text))
+    return reference_text
+
+
+def load_input_files(letters_dirs_to_work: list[str]) -> list[Path]:
+    """Find artist.yml files in directories selected by their first letter."""
+    input_paths = [
+        Path(root) / filename
+        for root, _, filenames in os.walk(MOONGAS_COLLECTION_ROOTDIR)
+        for filename in filenames
+        if filename == "artist.yml"
+        and os.path.basename(root)[0] in letters_dirs_to_work
+    ]
+
+    input_paths = sorted(input_paths)
+    logger.info("Found %d YAML input file(s)", len(input_paths))
+    for input_path in input_paths:
+        logger.debug("Queued input file: %s", input_path)
+    return input_paths
+
+
+def clean_backup_files(root_dir: Path) -> int:
+    """Delete all backup files beneath the collection root directory."""
+    deleted_count = 0
+    for backup_path in root_dir.rglob("*.bak"):
+        if not backup_path.is_file():
+            continue
+        backup_path.unlink()
+        deleted_count += 1
+        logger.info("Deleted backup file: %s", backup_path)
+
+    logger.info("Deleted %d backup file(s) beneath %s", deleted_count, root_dir)
+    return deleted_count
+
+
+def process_artist_yaml_file(
+    input_path: Path,
+    reference_examples: str,
+    file_number: int,
+    total_files: int,
+) -> bool:
+    filename = input_path.name
+    started_at = time.monotonic()
+    temporary_path: Path | None = None
+
+    logger.info("[%d/%d] Processing %s", file_number, total_files, input_path)
+
+    try:
+        with open(input_path, "r", encoding="utf-8") as f:
+            raw_yaml = f.read()
+        logger.debug("Read %d characters from %s", len(raw_yaml), input_path)
+        logger.info("[%s] YAML before modification:\n%s", filename, raw_yaml)
+
+        # Call the LLM to fill in the info
+        prompt = (
+            "Use these completed YAML files as reference examples.\n\n"
+            f"{reference_examples}\n\n"
+            "Fill in this YAML file:\n\n"
+            f"{raw_yaml}"
+            if reference_examples
+            else f"Fill in this YAML file:\n\n{raw_yaml}"
+        )
+        logger.info(
+            "[%s] Sending request to model %s (%d prompt characters)",
+            filename,
+            MODEL_NAME,
+            len(prompt),
+        )
+        response = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            model=MODEL_NAME,
+            temperature=0.2,
+        )
+        logger.info("[%s] Received model response", filename)
+
+        content = response.choices[0].message.content
+        if content is None:
+            raise ValueError("Model response did not contain YAML content")
+        completed_yaml = content.strip()
+        if not completed_yaml:
+            raise ValueError("Model response contained empty YAML content")
+        logger.info(
+            "[%s] Model response contains %d characters", filename, len(completed_yaml)
+        )
+
+        yaml.safe_load(completed_yaml)
+        logger.info("[%s] YAML validation passed", filename)
+        logger.info("[%s] YAML after modification:\n%s", filename, completed_yaml)
+
+        backup_path = input_path.with_name(f"{input_path.name}.bak")
+        if completed_yaml == raw_yaml.strip():
+            logger.info(
+                "[%s] LLM result is unchanged; leaving source file untouched", filename
+            )
+            if backup_path.exists():
+                backup_path.unlink()
+                logger.info("[%s] Removed stale backup file %s", filename, backup_path)
+            return True
+
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=input_path.parent,
+            prefix=f".{input_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary_file:
+            temporary_file.write(completed_yaml)
+            temporary_path = Path(temporary_file.name)
+        logger.debug("[%s] Staged generated YAML at %s", filename, temporary_path)
+
+        shutil.copy2(input_path, backup_path)
+        logger.info("[%s] Backed up original file to %s", filename, backup_path)
+
+        os.replace(temporary_path, input_path)
+        temporary_path = None
+        logger.debug("[%s] Wrote generated YAML to %s", filename, input_path)
+
+        duration = time.monotonic() - started_at
+        logger.info(
+            "[%s] Saved %d characters to %s in %.2f seconds",
+            filename,
+            len(completed_yaml),
+            input_path,
+            duration,
+        )
+        logger.info(
+            "Diff tool command to compare the original YAML with the generated YAML: \n\n"
+            'meld "%s" "%s"\n\n',
+            backup_path,
+            input_path,
+        )
+        logger.info("[%s] Processing completed successfully", filename)
+        return True
+
+    except APIStatusError as e:
+        duration = time.monotonic() - started_at
+        if e.status_code == 410:
+            logger.error(
+                "[%s] Provider returned HTTP 410 after %.2f seconds: "
+                "the service is unavailable or retired. Set LLM_BASE_URL, "
+                "LLM_API_KEY, and LLM_MODEL to use another provider.",
+                filename,
+                duration,
+            )
+        else:
+            logger.exception(
+                "[%s] API request failed after %.2f seconds (HTTP %s): %s",
+                filename,
+                duration,
+                e.status_code,
+                e,
+            )
+    except Exception as e:
+        duration = time.monotonic() - started_at
+        logger.exception(
+            "[%s] Failed after %.2f seconds (%s): %s",
+            filename,
+            duration,
+            type(e).__name__,
+            e,
+        )
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+            logger.debug("[%s] Removed staged temporary file", filename)
+    return False
+
+
+def process_artist_yaml_files(path: Path, letters_dirs_to_work: list[str]) -> bool:
+    logger.info("Starting YAML processing")
+    logger.info("Input directory: %s", path.resolve())
+    logger.info("Output directory: %s", path.resolve())
+    logger.info("API endpoint: %s", BASE_URL)
+    logger.info("Model: %s", MODEL_NAME)
+
+    if not api_key:
+        logger.warning("GITHUB_TOKEN is not set; the API request will likely fail")
+
+    if not path.is_dir():
+        logger.error("Input directory does not exist: %s", path.resolve())
+        return False
+
+    reference_examples = load_reference_examples(LETTER_DIRS_FOR_REFERENCE_EXAMPLES)
+    input_files = load_input_files(letters_dirs_to_work)
+    if not input_files:
+        logger.warning(
+            "No input files matched letter directories: %s", letters_dirs_to_work
+        )
+        return False
+
+    logger.info(
+        "Selecting 1 random file from %d available file(s) with %d reference characters",
+        len(input_files),
+        len(reference_examples),
+    )
+    selected_file = random.choice(input_files)
+    logger.info("Selected random input file: %s", selected_file)
+    results = [process_artist_yaml_file(selected_file, reference_examples, 1, 1)]
+    succeeded = sum(results)
+    failed = len(results) - succeeded
+    logger.info("Batch complete: %d succeeded, %d failed", succeeded, failed)
+    return succeeded > 0 and failed == 0
+
+
+def clean():
+    logger.info("Cleaning up backup files in the collection root directory")
+    for backup_file in Path(MOONGAS_COLLECTION_ROOTDIR).rglob("*.bak"):
+        try:
+            backup_file.unlink()
+            logger.info("Removed backup file: %s", backup_file)
+        except Exception as e:
+            logger.warning("Failed to remove backup file %s: %s", backup_file, e)
+
+
+def main_loop():
+    while True:
+        letter_dirs = LETTER_DIRS_NEEDING_WORK
+        logger.info("Starting processing loop for letter directories: %s", letter_dirs)
+        process_artist_yaml_files(Path(MOONGAS_COLLECTION_ROOTDIR), letter_dirs)
+        logger.info(
+            "Processing loop complete; sleeping for %d seconds", SLEEP_BETWEEN_FILES
+        )
+        time.sleep(SLEEP_BETWEEN_FILES)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Process artist YAML files or clean up backup files."
+    )
+    parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="Clean backup files and exit instead of starting the processing loop.",
+    )
+    args = parser.parse_args()
+
+    if args.clean:
+        clean()
+    else:
+        main_loop()
