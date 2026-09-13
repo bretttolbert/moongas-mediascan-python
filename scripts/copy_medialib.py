@@ -3,6 +3,7 @@ from pathlib import Path
 import argparse
 import os
 import shutil
+from typing import NamedTuple
 
 from mediascan.utils.log import log_arguments
 
@@ -10,6 +11,13 @@ from mediascan.utils.log import log_arguments
 class DirCopyMode(Enum):
     SingleDirectory = 1  #  All images copies to single destination directory, replacing filenames with 00001.jpg etc.
     PreserveStructure = 2  #  Preserve directory structure and filenames in destination
+
+
+class CopyResults(NamedTuple):
+    would_be_copied: int
+    actually_copied: int
+    skipped: int
+    errors: int
 
 
 @log_arguments
@@ -21,7 +29,7 @@ def copy_medialib(
     dry_run: bool = False,
     ignore_existing: bool = True,
     dir_copy_mode: DirCopyMode = DirCopyMode.PreserveStructure,
-) -> int:
+) -> CopyResults:
     """
     Recursively copy files (e.g. album cover images) from src medialib directory
     to specified destination directory, preserving directory structure (default)
@@ -37,9 +45,14 @@ def copy_medialib(
 
     Returns number it copied (or would have copied if not dry_run)
     """
+    ret = CopyResults(
+        would_be_copied=0,
+        actually_copied=0,
+        skipped=0,
+        errors=0,
+    )
     if not dry_run:
         Path(dst_path).mkdir(parents=True, exist_ok=True)
-    count = 0
 
     # first make the directories
     if dir_copy_mode == DirCopyMode.PreserveStructure:
@@ -74,7 +87,7 @@ def copy_medialib(
             if dir_copy_mode == DirCopyMode.SingleDirectory:
                 # This mode is for creating flat dir full of images, etc.
                 # so we need to make the filenames unique
-                dst_fname: str = str(count + 1).rjust(5, "0") + src_ext
+                dst_fname: str = str(ret.would_be_copied + 1).rjust(5, "0") + src_ext
                 dst_abs_path = dst_abs_path.joinpath(dst_fname)
             elif dir_copy_mode == DirCopyMode.PreserveStructure:
                 # This mode retains the original filename exactly
@@ -106,8 +119,9 @@ def copy_medialib(
                 if not ignore_existing or not dst_abs_path.exists():
                     if not dry_run:
                         shutil.copy(src_file_abs_path, dst_abs_path)
-                    count += 1
-    return count
+                    ret = ret._replace(actually_copied=ret.actually_copied + 1)
+                ret = ret._replace(would_be_copied=ret.would_be_copied + 1)
+    return ret
 
 
 @log_arguments
@@ -119,7 +133,7 @@ def copy_medialibs(
     dry_run: bool = False,
     ignore_existing: bool = True,
     dir_copy_mode: DirCopyMode = DirCopyMode.PreserveStructure,
-) -> int:
+) -> CopyResults:
     """
     Copies files* from one or more medialib directories from src directory to
     medialib directories inside the specified root destination directory
@@ -141,9 +155,14 @@ def copy_medialibs(
         - /data/Covers/Music
         - /data/Covers/OtherMusic
     """
-    count: int = 0
+    ret = CopyResults(
+        would_be_copied=0,
+        actually_copied=0,
+        skipped=0,
+        errors=0,
+    )
     for src_path in src_paths:
-        count += copy_medialib(
+        ret_tmp: CopyResults = copy_medialib(
             src_path=src_path,
             dst_path=dst_root_path.joinpath(src_path.name),
             include_filenames=include_filenames,
@@ -152,9 +171,19 @@ def copy_medialibs(
             dry_run=dry_run,
             ignore_existing=ignore_existing,
         )
-        print(f"Total copied for medialib dir {src_path}: {count}")
-    print(f"Grand total copied for all medialib dirs: {count}")
-    return count
+        print(
+            f"Total copied for medialib dir {src_path}: would be copied: {ret_tmp.would_be_copied}; actually copied: {ret_tmp.actually_copied}; skipped: {ret_tmp.skipped}; errors: {ret_tmp.errors};"
+        )
+        ret = ret._replace(
+            would_be_copied=ret.would_be_copied + ret_tmp.would_be_copied,
+            actually_copied=ret.actually_copied + ret_tmp.actually_copied,
+            skipped=ret.skipped + ret_tmp.skipped,
+            errors=ret.errors + ret_tmp.errors,
+        )
+    print(
+        f"Grand total copied for all medialib dirs: would be copied: {ret.would_be_copied}; actually copied: {ret.actually_copied}; skipped: {ret.skipped}; errors: {ret.errors}"
+    )
+    return ret
 
 
 def copy_covers():
