@@ -27,8 +27,9 @@ def copy_medialib(
     include_filenames: list[str] = ["artist.yml", "cover.jpg"],
     exclude_keywords: list[str] = [],
     dry_run: bool = False,
-    ignore_existing: bool = True,
     dir_copy_mode: DirCopyMode = DirCopyMode.PreserveStructure,
+    overwrite_existing: bool = False,
+    overwrite_newer: bool = False,
 ) -> CopyResults:
     """
     Recursively copy files (e.g. album cover images) from src medialib directory
@@ -45,6 +46,13 @@ def copy_medialib(
 
     Returns number it copied (or would have copied if not dry_run)
     """
+    if overwrite_newer and overwrite_existing:
+        raise ValueError(
+            "overwrite_newer and overwrite_existing are mutually exclusive"
+        )
+    if overwrite_newer:
+        overwrite_existing = True
+
     ret = CopyResults(
         would_be_copied=0,
         actually_copied=0,
@@ -100,7 +108,8 @@ def copy_medialib(
 
             # Never replace a destination file that is newer than the source.
             if (
-                dst_abs_path.exists()
+                not overwrite_newer
+                and dst_abs_path.exists()
                 and dst_abs_path.stat().st_mtime > src_file_abs_path.stat().st_mtime
             ):
                 print(
@@ -110,18 +119,18 @@ def copy_medialib(
                 ret = ret._replace(skipped=ret.skipped + 1)
                 continue
 
-            # Don't copy if it exists unless ignore_existing==False
-            if not ignore_existing or not dst_abs_path.exists():
-                # Special case:
-                # If copying a .jpg file and .webp file already exists in destination,
-                # skip the copy unless ignore_existing==False
-                # (I copy jpegs first and then convert them to webp in place,
-                # consequently I want to skip copying jpegs that have already been
-                # converted)
+            # Don't copy if it exists unless overwrite_existing==True.
+            # Special case:
+            # If copying a .jpg file and .webp file already exists in destination,
+            # skip the copy unless overwrite_existing==True.
+            # (I copy jpegs first and then convert them to webp in place,
+            # consequently I want to skip copying jpegs that have already been
+            # converted)
+            if overwrite_existing or not dst_abs_path.exists():
                 if src_ext == ".jpg":
                     dst_fbase, _ = os.path.splitext(dst_abs_path)
                     dst_abs_path_converted = Path(dst_fbase + ".webp")
-                    if dst_abs_path_converted.exists() and ignore_existing:
+                    if dst_abs_path_converted.exists() and not overwrite_existing:
                         print(
                             f"Skipping file '{src_file_abs_path}' because the converted "
                             f"destination file '{dst_abs_path_converted}' already exists"
@@ -149,8 +158,9 @@ def copy_medialibs(
     include_filenames: list[str] = ["artist.yml", "cover.jpg"],
     exclude_keywords: list[str] = [],
     dry_run: bool = False,
-    ignore_existing: bool = True,
     dir_copy_mode: DirCopyMode = DirCopyMode.PreserveStructure,
+    overwrite_existing: bool = False,
+    overwrite_newer: bool = False,
 ) -> CopyResults:
     """
     Copies files* from one or more medialib directories from src directory to
@@ -173,6 +183,11 @@ def copy_medialibs(
         - /data/Covers/Music
         - /data/Covers/OtherMusic
     """
+    if overwrite_newer and overwrite_existing:
+        raise ValueError(
+            "overwrite_newer and overwrite-existing are mutually exclusive"
+        )
+
     ret = CopyResults(
         would_be_copied=0,
         actually_copied=0,
@@ -187,7 +202,8 @@ def copy_medialibs(
             dir_copy_mode=dir_copy_mode,
             exclude_keywords=exclude_keywords,
             dry_run=dry_run,
-            ignore_existing=ignore_existing,
+            overwrite_existing=overwrite_existing,
+            overwrite_newer=overwrite_newer,
         )
         print(
             f"Total copied for medialib dir {src_path}: would be copied: {ret_tmp.would_be_copied}; actually copied: {ret_tmp.actually_copied}; skipped: {ret_tmp.skipped}; errors: {ret_tmp.errors};"
@@ -211,8 +227,9 @@ def copy_covers():
         include_filenames=["cover.jpg"],
         exclude_keywords=[],
         dry_run=False,
-        ignore_existing=True,
         dir_copy_mode=DirCopyMode.PreserveStructure,
+        overwrite_existing=False,
+        overwrite_newer=False,
     )
 
 
@@ -223,8 +240,9 @@ def copy_artist_yaml():
         include_filenames=["cover.jpg"],
         exclude_keywords=[],
         dry_run=False,
-        ignore_existing=True,
         dir_copy_mode=DirCopyMode.PreserveStructure,
+        overwrite_existing=False,
+        overwrite_newer=False,
     )
 
 
@@ -263,12 +281,17 @@ def parse_args():
         action="store_true",
         help="Perform a trial run without making actual file changes.",
     )
-    parser.add_argument(
+    overwrite_group = parser.add_mutually_exclusive_group()
+    overwrite_group.add_argument(
         "--overwrite-existing",
-        dest="ignore_existing",
-        action="store_false",
-        default=True,
-        help="Overwrite existing destination files (if newer in source) (default: skip existing).",
+        dest="overwrite_existing",
+        action="store_true",
+        help="Overwrite existing destination files (excluding newer files) (default: skip existing).",
+    )
+    overwrite_group.add_argument(
+        "--overwrite-newer",
+        action="store_true",
+        help="Overwrite existing destination files (including newer files) (default: skip newer).",
     )
     parser.add_argument(
         "--dir-copy-mode",
@@ -290,8 +313,9 @@ def main():
         include_filenames=args.include_filenames,
         exclude_keywords=args.exclude_keywords,
         dry_run=args.dry_run,
-        ignore_existing=args.ignore_existing,
+        overwrite_existing=args.overwrite_existing,
         dir_copy_mode=args.dir_copy_mode,
+        overwrite_newer=args.overwrite_newer,
     )
 
 
