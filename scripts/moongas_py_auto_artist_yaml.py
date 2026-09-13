@@ -70,7 +70,6 @@ BASE_URL = os.environ.get(
 MODEL_NAME = os.environ.get(
     "LLM_MODEL", os.environ.get("GITHUB_MODEL", "openai/gpt-4o-mini")
 )
-SLEEP_BETWEEN_FILES = int(os.environ.get("SLEEP_BETWEEN_FILES", "30"))
 api_key = os.environ.get(
     "LLM_API_KEY", os.environ.get("GITHUB_TOKEN", os.environ.get("OPENAI_API_KEY"))
 )
@@ -340,15 +339,15 @@ def clean():
             logger.warning("Failed to remove backup file %s: %s", backup_file, e)
 
 
-def main_loop():
+def main_loop(sleep_between_files: int):
     while True:
         letter_dirs = LETTER_DIRS_NEEDING_WORK
         logger.info("Starting processing loop for letter directories: %s", letter_dirs)
         process_artist_yaml_files(Path(MOONGAS_COLLECTION_ROOTDIR), letter_dirs)
         logger.info(
-            "Processing loop complete; sleeping for %d seconds", SLEEP_BETWEEN_FILES
+            "Processing loop complete; sleeping for %d seconds", sleep_between_files
         )
-        time.sleep(SLEEP_BETWEEN_FILES)
+        time.sleep(sleep_between_files)
 
 
 if __name__ == "__main__":
@@ -360,9 +359,15 @@ if __name__ == "__main__":
         action="store_true",
         help="Clean backup files and exit instead of starting the processing loop.",
     )
+    parser.add_argument(
+        "--sleep",
+        type=int,
+        default=30,
+        help="Seconds to sleep between processing loops (default: 30).",
+    )
     args = parser.parse_args()
 
     if args.clean:
         clean()
     else:
-        main_loop()
+        main_loop(args.sleep)
