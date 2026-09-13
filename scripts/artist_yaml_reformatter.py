@@ -52,7 +52,7 @@ def excluded(path: Path):
 
 
 def main():
-    files_yaml_path = "../../out/files.yml"
+    files_yaml_path = Path("../../out/files.yml")
     files = load_media_files_yaml_file(files_yaml_path)
     artist_paths: dict[str, Path] = {}
     for file in files.files:
@@ -73,7 +73,7 @@ def main():
         else:
             # convert yaml (if applicable)
             try:
-                adf = load_artist_yaml_file(str(artist_yaml_path))
+                adf = load_artist_yaml_file(artist_yaml_path)
                 reformat_applicable = REFORMAT_ALL
 
                 if (

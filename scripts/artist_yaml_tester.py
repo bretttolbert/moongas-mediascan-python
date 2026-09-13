@@ -109,7 +109,7 @@ def main():
             # and not to the geographic entity "Great Britain".
 
             try:
-                adf = load_artist_yaml_file(str(artist_yaml_path))
+                adf = load_artist_yaml_file(artist_yaml_path)
                 if adf.artist_data.country_code.upper() == "UK":
                     raise Exception(
                         "invalid countryCode 'UK' (United Kingdom country code should be 'GB', per ISO standard)"

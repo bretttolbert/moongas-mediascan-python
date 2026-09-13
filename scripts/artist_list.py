@@ -1,5 +1,5 @@
 import sys
-
+from pathlib import Path
 from mediascan.media_file_data import MediaFileData
 from mediascan.media_files_yaml_file_loader import load_media_files_yaml_file
 
@@ -16,7 +16,7 @@ def main():
     if len(sys.argv) != 2:
         print("Usage: {0} <files yaml file>".format(sys.argv[0]))
     else:
-        files_yaml_file = load_media_files_yaml_file(sys.argv[1])
+        files_yaml_file = load_media_files_yaml_file(Path(sys.argv[1]))
         files = files_yaml_file.files
         list_artists(files)
 
