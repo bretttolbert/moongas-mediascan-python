@@ -89,6 +89,37 @@ def test_copy_medialib_overwrites_older_destination(tmp_path: Path) -> None:
     assert dst_file.read_text() == "source"
 
 
+def test_copy_medialib_skips_identical_destination(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    src_path = tmp_path / "src"
+    dst_path = tmp_path / "dst"
+    src_path.mkdir()
+    dst_path.mkdir()
+    src_file = src_path / "cover.jpg"
+    dst_file = dst_path / "cover.jpg"
+    src_file.write_text("identical content")
+    dst_file.write_text("identical content")
+    os.utime(src_file, (100, 100))
+    os.utime(dst_file, (200, 200))
+
+    result = copy_medialib(
+        src_path,
+        dst_path,
+        include_filenames=["cover.jpg"],
+        overwrite_existing=True,
+        overwrite_newer=False,
+    )
+
+    assert result.actually_copied == 0
+    assert result.skipped == 1
+    captured = capsys.readouterr()
+    assert (
+        f"Skipping file '{src_file}' because it is identical to destination file "
+        f"'{dst_file}'" in captured.out
+    )
+
+
 def test_copy_medialib_overwrites_newer_destination_when_requested(
     tmp_path: Path,
 ) -> None:

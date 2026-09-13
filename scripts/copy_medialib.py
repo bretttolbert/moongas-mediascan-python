@@ -1,6 +1,7 @@
 from enum import Enum
 from pathlib import Path
 import argparse
+import hashlib
 import os
 import shutil
 from typing import NamedTuple
@@ -18,6 +19,17 @@ class CopyResults(NamedTuple):
     actually_copied: int
     skipped: int
     errors: int
+
+
+def _files_have_same_hash(first_path: Path, second_path: Path) -> bool:
+    def file_hash(path: Path) -> str:
+        digest = hashlib.sha256()
+        with path.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+
+    return file_hash(first_path) == file_hash(second_path)
 
 
 @log_arguments
@@ -105,6 +117,16 @@ def copy_medialib(
             elif dir_copy_mode == DirCopyMode.PreserveStructure:
                 # This mode retains the original filename exactly
                 dst_abs_path = dst_abs_path.joinpath(src_file_rel_path)
+
+            if dst_abs_path.exists() and _files_have_same_hash(
+                src_file_abs_path, dst_abs_path
+            ):
+                print(
+                    f"Skipping file '{src_file_abs_path}' because it is identical "
+                    f"to destination file '{dst_abs_path}'"
+                )
+                ret = ret._replace(skipped=ret.skipped + 1)
+                continue
 
             # Never replace a destination file that is newer than the source.
             if (
