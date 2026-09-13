@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
 
-from mediascan.artistdatafile_loader import load_artistdatafile_yaml
-from mediascan.mediafiles_loader import load_files_yaml
+from mediascan.artist_yaml_file_loader import load_artist_yaml_file
+from mediascan.media_files_yaml_file_loader import load_media_files_yaml_file
 
 """
 Tests whether media library artist dirs have valid artists.yml file
@@ -56,7 +56,7 @@ def main():
                     print(f"found artist.yml: absolute_path={absolute_path}")
     artist_yaml_paths = list(set(artist_yaml_paths))
 
-    files = load_files_yaml(files_yaml_path)
+    files = load_media_files_yaml_file(files_yaml_path)
     artist_paths: dict[str, Path] = {}
     for file in files.files:
         if file.artist not in artist_paths:
@@ -109,7 +109,7 @@ def main():
             # and not to the geographic entity "Great Britain".
 
             try:
-                adf = load_artistdatafile_yaml(str(artist_yaml_path))
+                adf = load_artist_yaml_file(str(artist_yaml_path))
                 if adf.artist_data.country_code.upper() == "UK":
                     raise Exception(
                         "invalid countryCode 'UK' (United Kingdom country code should be 'GB', per ISO standard)"

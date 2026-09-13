@@ -1,13 +1,14 @@
 import json
 from typing import Set
+from pathlib import Path
 
-from mediascan.artists_loader import load_artists_yaml
+from mediascan.artists_yaml_file_loader import load_artists_yaml_file
 
 regions_code_name_map_json_path = (
     "../../../mediaserver/app/static/json_data/region_code_name_map.json"
 )
-artists_yaml_path = "../../out/artists.yml"
-artists = load_artists_yaml(artists_yaml_path)
+artists_yaml_path = Path("../../out/artists.yml")
+artists = load_artists_yaml_file(artists_yaml_path)
 
 with open(regions_code_name_map_json_path) as f:
     missing: Set[str] = set()

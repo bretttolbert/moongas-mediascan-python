@@ -4,8 +4,8 @@ Batch modify artist.yml files to make changes to the yaml format
 
 from pathlib import Path
 
-from mediascan.artistdatafile_loader import load_artistdatafile_yaml
-from mediascan.mediafiles_loader import load_files_yaml
+from mediascan.artist_yaml_file_loader import load_artist_yaml_file
+from mediascan.media_files_yaml_file_loader import load_media_files_yaml_file
 
 """
 Converts artist.yml files from one format to another
@@ -53,7 +53,7 @@ def excluded(path: Path):
 
 def main():
     files_yaml_path = "../../out/files.yml"
-    files = load_files_yaml(files_yaml_path)
+    files = load_media_files_yaml_file(files_yaml_path)
     artist_paths: dict[str, Path] = {}
     for file in files.files:
         if file.artist not in artist_paths:
@@ -73,7 +73,7 @@ def main():
         else:
             # convert yaml (if applicable)
             try:
-                adf = load_artistdatafile_yaml(str(artist_yaml_path))
+                adf = load_artist_yaml_file(str(artist_yaml_path))
                 reformat_applicable = REFORMAT_ALL
 
                 if (

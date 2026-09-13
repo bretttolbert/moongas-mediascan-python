@@ -5,8 +5,8 @@ from typing import Union
 
 import pandas as pd
 
-from mediascan.artistdata import ArtistData
-from mediascan.artistdatafile import ArtistDataFile
+from mediascan.artist_data import ArtistData
+from mediascan.artist_yaml_file import ArtistYamlFile
 
 """
 Generates artist.yml files from artist data CSV files
@@ -45,7 +45,7 @@ def write_yaml_file(filepath: Path, artist_data: ArtistDataPrimitive):
         str(artist_data["region_code"]),
         list(artist_data["language_codes"]),
     )
-    adf = ArtistDataFile(ad)
+    adf = ArtistYamlFile(ad)
     try:
         yaml_str: str = adf.to_yaml(allow_unicode=True)
         # print(yaml_str)

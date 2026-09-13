@@ -8,8 +8,8 @@ from matplotlib.axes import Axes
 import numpy as np
 import pandas as pd
 
-from mediascan.mediafiles import MediaFiles
-from mediascan.mediafiles_loader import load_files_yaml
+from mediascan.media_file_data import MediaFileData
+from mediascan.media_files_yaml_file_loader import load_media_files_yaml_file
 
 """
 mediastats.py
@@ -29,9 +29,9 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
-def get_year_counts(files: MediaFiles) -> dict[int, int]:
+def get_year_counts(files: list[MediaFileData]) -> dict[int, int]:
     counts: dict[int, int] = {}
-    for f in files.files:
+    for f in files:
         year = int(f.year)
         if year in counts:
             counts[year] += 1
@@ -41,10 +41,10 @@ def get_year_counts(files: MediaFiles) -> dict[int, int]:
 
 
 def get_genre_counts(
-    files: MediaFiles, min_val: int, reverse_sort: bool = False
+    files: list[MediaFileData], min_val: int, reverse_sort: bool = False
 ) -> dict[str, int]:
     counts: dict[str, int] = {}
-    for f in files.files:
+    for f in files:
         genre = f.genre
         if genre in counts:
             counts[genre] += 1
@@ -59,32 +59,32 @@ def get_genre_counts(
     )
 
 
-def get_file_sizes(files: MediaFiles) -> list[int]:
-    return [int(f.size) for f in files.files]
+def get_file_sizes(files: list[MediaFileData]) -> list[int]:
+    return [int(f.size) for f in files]
 
 
-def get_file_durations(files: MediaFiles) -> list[int]:
-    return [int(f.duration) for f in files.files]
+def get_file_durations(files: list[MediaFileData]) -> list[int]:
+    return [int(f.duration) for f in files]
 
 
-def get_years(files: MediaFiles):
-    return [int(f.year) for f in files.files]
+def get_years(files: list[MediaFileData]):
+    return [int(f.year) for f in files]
 
 
-def plt_year_counts(files: MediaFiles):
+def plt_year_counts(files: list[MediaFileData]):
     counts: dict[int, int] = get_year_counts(files)
     df = pd.DataFrame({"year": counts.keys(), "count": counts.values()})
     df.plot.bar(x="year", y="count", rot=90)  # type: ignore
 
 
-def plt_genre_counts(files: MediaFiles, min_val: int):
+def plt_genre_counts(files: list[MediaFileData], min_val: int):
     counts = get_genre_counts(files, min_val)
     df = pd.DataFrame({"genre": counts.keys(), "count": counts.values()})
     df.plot.barh(x="genre", y="count", rot=0)  # type: ignore
     plt.yticks(fontsize=9)  # type: ignore
 
 
-def plt_file_sizes(files: MediaFiles):
+def plt_file_sizes(files: list[MediaFileData]):
     sizes = get_file_sizes(files)
     plt.hist(sizes, bins=1000)  # type: ignore
     MEGABYTE = 10**6
@@ -92,13 +92,11 @@ def plt_file_sizes(files: MediaFiles):
     conversion_unit: int = MEGABYTE
     axes: Axes = plt.gca()
     current_values = cast(list[float], axes.get_xticks().tolist())
-    labels: list[str] = [
-        "{:.2f}".format(x / conversion_unit) for x in current_values
-    ]
+    labels: list[str] = ["{:.2f}".format(x / conversion_unit) for x in current_values]
     axes.set_xticklabels(labels)  # type: ignore
 
 
-def plt_file_durations(files: MediaFiles):
+def plt_file_durations(files: list[MediaFileData]):
     durations = get_file_durations(files)
     plt.hist(durations, bins=range(800), color="b", edgecolor="red")  # type: ignore
     plt.xticks(rotation="vertical")  # type: ignore
@@ -114,7 +112,7 @@ def plt_file_durations(files: MediaFiles):
     axes.set_xticks(tick_positions)  # type: ignore[reportUnknownMemberType]
 
 
-def plt_year_vs_duration(files: MediaFiles):
+def plt_year_vs_duration(files: list[MediaFileData]):
     years = get_years(files)
     durations = get_file_durations(files)
     plt.scatter(x=years, y=durations)  # type: ignore
@@ -122,27 +120,27 @@ def plt_year_vs_duration(files: MediaFiles):
     plt.ylim(0, 3000)  # type: ignore
 
 
-def print_genres(files: MediaFiles):
+def print_genres(files: list[MediaFileData]):
     genres: Set[str] = set()  # type: ignore
-    for f in files.files:
+    for f in files:
         genres.add(f.genre)
     print(sorted(genres))
 
 
-def print_genre_counts(files: MediaFiles):
+def print_genre_counts(files: list[MediaFileData]):
     counts = get_genre_counts(files, 1, reverse_sort=True)
     print(counts)
 
 
-def get_album_paths(files: MediaFiles) -> Set[Tuple[str, str]]:
+def get_album_paths(files: list[MediaFileData]) -> Set[Tuple[str, str]]:
     """returns set of tuples of (album,path)"""
     albums: Set[Tuple[str, str]] = set()
-    for f in files.files:
+    for f in files:
         albums.add((f.album, os.path.dirname(f.path)))
     return albums
 
 
-def print_covers_by_size(files: MediaFiles):
+def print_covers_by_size(files: list[MediaFileData]):
     """Use this to find low-resolution album cover files that need to be updated to high-res"""
     album_paths: Set[Tuple[str, str]] = get_album_paths(files)
     cover_paths: list[Tuple[str, int]] = []
@@ -159,7 +157,8 @@ def main():
     if len(sys.argv) != 2:
         print("Usage: {0} <files yaml file>".format(sys.argv[0]))
     else:
-        files = load_files_yaml(sys.argv[1])
+        files_yaml_file = load_media_files_yaml_file(sys.argv[1])
+        files = files_yaml_file.files
         # print_covers_by_size(files)
         # print_genre_counts(files)
         # print_genres(files)

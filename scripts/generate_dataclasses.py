@@ -17,4 +17,4 @@ def load_yaml_file(yaml_fname: str):
 
 
 data = load_yaml_file("files.yml")
-print(PyCodeGenerator(file_contents=json.dumps(data), experimental=True).py_code)
+print(PyCodeGenerator(json.dumps(data), experimental=True).py_code)

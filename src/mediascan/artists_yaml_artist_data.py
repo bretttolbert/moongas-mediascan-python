@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from dataclass_wizard.v0 import YAMLWizard
 
-from .artistdata import ArtistData
+from .artist_data import ArtistData
 
 
 @dataclass
-class Artist(YAMLWizard):
+class ArtistsYamlArtistDirData(YAMLWizard):
     """
-    Artist dataclass
+    DEPRECATED (only used by deprecated artists.yml)
     an artist, including directory path and the data read from the artist.yml file in said directory
     """
 

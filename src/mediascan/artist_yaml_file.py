@@ -2,13 +2,13 @@ from dataclasses import dataclass
 from dataclass_wizard.v0 import YAMLWizard
 from dataclass_wizard.v0.enums import LetterCase
 
-from .artistdata import ArtistData, ArtistDataOldFmt
+from .artist_data import ArtistData, ArtistDataOldFmt
 
 
 @dataclass
-class ArtistDataFile(YAMLWizard, key_transform=LetterCase.CAMEL):
+class ArtistYamlFile(YAMLWizard, key_transform=LetterCase.CAMEL):
     """
-    ArtistDataFile dataclass
+    ArtistYamlFile dataclass
     Data model for a single artist.yml YAML file
 
     """
@@ -17,9 +17,9 @@ class ArtistDataFile(YAMLWizard, key_transform=LetterCase.CAMEL):
 
 
 @dataclass
-class ArtistDataFileOldFmt(YAMLWizard, key_transform=LetterCase.CAMEL):
+class ArtistYamlFileOldFmt(YAMLWizard, key_transform=LetterCase.CAMEL):
     """
-    ArtistDataFile dataclass
+    ArtistYamlFile dataclass
     Data model for a single artist.yml YAML file
 
     """

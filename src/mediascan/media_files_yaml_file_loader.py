@@ -1,10 +1,10 @@
 from pathlib import Path
 from typing import cast
 
-from .mediafiles import MediaFiles
+from .media_files_yaml_file import MediaFilesYamlFile as MediaFiles
 
 
-def load_files_yaml(yaml_fname: str) -> MediaFiles:
+def load_media_files_yaml_file(yaml_fname: str) -> MediaFiles:
     """
     raises: FileNotFoundError, yaml.YAMLError
     """

@@ -2,7 +2,7 @@ import random
 import subprocess
 import sys
 
-from mediascan.mediafiles_loader import load_files_yaml
+from mediascan.media_files_yaml_file_loader import load_media_files_yaml_file
 
 """
 mediajuke.py
@@ -16,7 +16,7 @@ def main():
     else:
         player_cmd = sys.argv[1]
         file_yaml_path = sys.argv[2]
-        files = load_files_yaml(file_yaml_path)
+        files = load_media_files_yaml_file(file_yaml_path)
         file = random.choice(files.files)
         subprocess.run([player_cmd, file.path], check=False)
 
