@@ -80,6 +80,13 @@ def copy_medialib(
                 # This mode retains the original filename exactly
                 dst_abs_path = dst_abs_path.joinpath(src_file_rel_path)
 
+            # Never replace a destination file that is newer than the source.
+            if (
+                dst_abs_path.exists()
+                and dst_abs_path.stat().st_mtime > src_file_abs_path.stat().st_mtime
+            ):
+                continue
+
             # Don't copy if it exists unless ignore_existing==False
             if not ignore_existing or not dst_abs_path.exists():
 
