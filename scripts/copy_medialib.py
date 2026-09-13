@@ -68,6 +68,7 @@ def copy_medialib(
         for src_fname in files:
             # skip any files not specifically included
             if src_fname not in include_filenames:
+                ret = ret._replace(skipped=ret.skipped + 1)
                 continue
             # skip files with any exclude keywords anywhere in the file path
             src_file_abs_path = Path(root).joinpath(src_fname)
@@ -79,6 +80,7 @@ def copy_medialib(
                     )
                     skip = True
             if skip:
+                ret = ret._replace(skipped=ret.skipped + 1)
                 continue
             _, src_ext = os.path.splitext(src_fname)
 
@@ -98,11 +100,11 @@ def copy_medialib(
                 dst_abs_path.exists()
                 and dst_abs_path.stat().st_mtime > src_file_abs_path.stat().st_mtime
             ):
+                ret = ret._replace(skipped=ret.skipped + 1)
                 continue
 
             # Don't copy if it exists unless ignore_existing==False
             if not ignore_existing or not dst_abs_path.exists():
-
                 # Special case:
                 # If copying a .jpg file and .webp file already exists in destination,
                 # skip the copy unless ignore_existing==False
@@ -113,14 +115,15 @@ def copy_medialib(
                     dst_fbase, _ = os.path.splitext(dst_abs_path)
                     dst_abs_path_converted = Path(dst_fbase + ".webp")
                     if dst_abs_path_converted.exists() and ignore_existing:
+                        ret = ret._replace(skipped=ret.skipped + 1)
                         continue
 
-                # Copy the file unless it exists and ignore_existing==True
-                if not ignore_existing or not dst_abs_path.exists():
-                    if not dry_run:
-                        shutil.copy(src_file_abs_path, dst_abs_path)
+                if not dry_run:
+                    shutil.copy(src_file_abs_path, dst_abs_path)
                     ret = ret._replace(actually_copied=ret.actually_copied + 1)
                 ret = ret._replace(would_be_copied=ret.would_be_copied + 1)
+            else:
+                ret = ret._replace(skipped=ret.skipped + 1)
     return ret
 
 
