@@ -293,7 +293,9 @@ def process_artist_yaml_file(
     return False
 
 
-def process_artist_yaml_files(path: Path, letters_dirs_to_work: list[str]) -> bool:
+def process_artist_yaml_files(
+    path: Path, letters_dirs_to_work: list[str], processed_files: set[Path]
+) -> bool | None:
     logger.info("Starting YAML processing")
     logger.info("Input directory: %s", path.resolve())
     logger.info("Output directory: %s", path.resolve())
@@ -308,12 +310,17 @@ def process_artist_yaml_files(path: Path, letters_dirs_to_work: list[str]) -> bo
         return False
 
     reference_examples = load_reference_examples(LETTER_DIRS_FOR_REFERENCE_EXAMPLES)
-    input_files = load_input_files(letters_dirs_to_work)
+    input_files = [
+        input_file
+        for input_file in load_input_files(letters_dirs_to_work)
+        if input_file not in processed_files
+    ]
     if not input_files:
         logger.warning(
-            "No input files matched letter directories: %s", letters_dirs_to_work
+            "No unprocessed input files remain for letter directories: %s",
+            letters_dirs_to_work,
         )
-        return False
+        return None
 
     logger.info(
         "Selecting 1 random file from %d available file(s) with %d reference characters",
@@ -321,6 +328,7 @@ def process_artist_yaml_files(path: Path, letters_dirs_to_work: list[str]) -> bo
         len(reference_examples),
     )
     selected_file = random.choice(input_files)
+    processed_files.add(selected_file)
     logger.info("Selected random input file: %s", selected_file)
     results = [process_artist_yaml_file(selected_file, reference_examples, 1, 1)]
     succeeded = sum(results)
@@ -340,10 +348,16 @@ def clean():
 
 
 def main_loop(sleep_between_files: int):
+    processed_files: set[Path] = set()
     while True:
         letter_dirs = LETTER_DIRS_NEEDING_WORK
         logger.info("Starting processing loop for letter directories: %s", letter_dirs)
-        process_artist_yaml_files(Path(MOONGAS_COLLECTION_ROOTDIR), letter_dirs)
+        result = process_artist_yaml_files(
+            Path(MOONGAS_COLLECTION_ROOTDIR), letter_dirs, processed_files
+        )
+        if result is None:
+            logger.info("All matching files have been processed; exiting loop")
+            return
         logger.info(
             "Processing loop complete; sleeping for %d seconds", sleep_between_files
         )
@@ -370,4 +384,7 @@ if __name__ == "__main__":
     if args.clean:
         clean()
     else:
-        main_loop(args.sleep)
+        try:
+            main_loop(args.sleep)
+        except KeyboardInterrupt:
+            logger.info("Interrupted by user; exiting")
