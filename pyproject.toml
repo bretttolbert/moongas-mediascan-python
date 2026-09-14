@@ -66,6 +66,7 @@ stats = [
 llm = [
     "openai>=3.13.0",
     "PyYAML>=6.0.3",
+  "tqdm>=4.67.0",
 ]
 
 [project.urls]

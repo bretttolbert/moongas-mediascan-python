@@ -16,6 +16,7 @@ import shutil
 import tempfile
 import time
 
+from tqdm import tqdm
 import yaml
 from openai import APIStatusError, OpenAI
 
@@ -349,19 +350,25 @@ def clean():
 
 def main_loop(sleep_between_files: int):
     processed_files: set[Path] = set()
-    while True:
-        letter_dirs = LETTER_DIRS_NEEDING_WORK
-        logger.info("Starting processing loop for letter directories: %s", letter_dirs)
-        result = process_artist_yaml_files(
-            Path(MOONGAS_COLLECTION_ROOTDIR), letter_dirs, processed_files
-        )
-        if result is None:
-            logger.info("All matching files have been processed; exiting loop")
-            return
-        logger.info(
-            "Processing loop complete; sleeping for %d seconds", sleep_between_files
-        )
-        time.sleep(sleep_between_files)
+    letter_dirs = LETTER_DIRS_NEEDING_WORK
+    total_files = len(load_input_files(letter_dirs))
+    with tqdm(total=total_files, desc="Processing files", unit="file") as progress:
+        while True:
+            logger.info(
+                "Starting processing loop for letter directories: %s", letter_dirs
+            )
+            result = process_artist_yaml_files(
+                Path(MOONGAS_COLLECTION_ROOTDIR), letter_dirs, processed_files
+            )
+            if result is None:
+                logger.info("All matching files have been processed; exiting loop")
+                return
+            progress.update(1)
+            logger.info(
+                "Processing loop complete; sleeping for %d seconds",
+                sleep_between_files,
+            )
+            time.sleep(sleep_between_files)
 
 
 if __name__ == "__main__":
