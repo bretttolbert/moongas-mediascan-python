@@ -9,11 +9,14 @@ def test_load_artist_yaml_file(tmp_path: Path) -> None:
 artistData:
   artistNames:
     - The Example Band
+  dob:
+    y: 1990
   city: Example City
   countryCode: US
   regionCode: US-CA
   languageCodes:
     - en
+  members: []
 """)
 
     loaded = load_artist_yaml_file(artist_yaml_path)

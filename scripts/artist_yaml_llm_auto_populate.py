@@ -24,9 +24,11 @@ import shutil
 import tempfile
 import time
 
+from dataclass_wizard.v0.errors import MissingFields
 from tqdm import tqdm
 from openai import APIStatusError, OpenAI
 
+from mediascan.artist_yaml_file import ArtistYamlFile
 from mediascan.artist_yaml_file_validator import (
     validate_artist_yaml_content,
     validate_artist_yaml_file,
@@ -167,6 +169,28 @@ def clean_backup_files(root_dir: Path) -> int:
 
     logger.info("Deleted %d backup file(s) beneath %s", deleted_count, root_dir)
     return deleted_count
+
+
+def try_load_artist_yaml_for_skip(input_path: Path) -> bool:
+    """Return whether strict loading succeeds before deciding to skip a file."""
+    try:
+        getattr(ArtistYamlFile, "from_yaml")(input_path.read_text(encoding="utf-8"))
+        return True
+    except MissingFields as exception:
+        logger.warning(
+            "Artist YAML requires LLM processing: %s is missing fields %s; "
+            "rescued raw data: %s",
+            input_path,
+            exception.missing_fields,
+            exception.obj,
+        )
+    except Exception as exception:
+        logger.warning(
+            "Artist YAML requires LLM processing: could not strictly load %s: %s",
+            input_path,
+            exception,
+        )
+    return False
 
 
 def process_artist_yaml_file(
@@ -335,6 +359,8 @@ def process_artist_yaml_files(
         return None
 
     for input_file in input_files:
+        if not try_load_artist_yaml_for_skip(input_file):
+            continue
         artists_missing: list[str] = []
         exceptions: list[tuple[Path, Exception]] = []
         validate_artist_yaml_file(

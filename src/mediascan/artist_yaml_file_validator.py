@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import cast
 
 import yaml
 
@@ -6,8 +7,40 @@ from mediascan.artist_yaml_file_loader import load_artist_yaml_file
 
 
 def validate_artist_yaml_content(content: str) -> None:
-    """Validate that generated artist YAML content is valid YAML."""
-    yaml.safe_load(content)
+    """Validate YAML syntax and the required artist metadata structure."""
+    document = yaml.safe_load(content)
+    if not isinstance(document, dict):
+        raise ValueError("artistData must be a mapping")
+
+    document_mapping = cast(dict[str, object], document)
+    artist_data_value = document_mapping.get("artistData")
+    if not isinstance(artist_data_value, dict):
+        raise ValueError("artistData must be a mapping")
+
+    artist_data = cast(dict[str, object], artist_data_value)
+    for field in (
+        "artistNames",
+        "dob",
+        "city",
+        "countryCode",
+        "regionCode",
+        "languageCodes",
+        "members",
+    ):
+        if field not in artist_data:
+            raise ValueError(f"artistData is missing required tag '{field}'")
+
+    if not isinstance(artist_data["members"], list):
+        raise ValueError("artistData.members must be a list")
+
+    members = cast(list[object], artist_data["members"])
+    for index, member in enumerate(members):
+        if not isinstance(member, dict):
+            raise ValueError(f"member {index} must be a mapping")
+        member = cast(dict[str, object], member)
+        for field in ("artistNames", "dob", "artistBands", "artistRoles"):
+            if field not in member:
+                raise ValueError(f"member {index} is missing required tag '{field}'")
 
 
 def validate_artist_yaml_file(
@@ -31,6 +64,7 @@ def validate_artist_yaml_file(
         exceptions.append((artist_yaml_path, ex))
 
     try:
+        validate_artist_yaml_content(artist_yaml_path.read_text(encoding="utf-8"))
         adf = load_artist_yaml_file(artist_yaml_path)
         if adf.artist_data.country_code.upper() == "UK":
             raise Exception(

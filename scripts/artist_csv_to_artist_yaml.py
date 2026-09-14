@@ -1,11 +1,11 @@
 import os
 from pathlib import Path
 import sys
-from typing import Union
+from typing import Mapping, Union, cast
 
 import pandas as pd
 
-from mediascan.artist_data import ArtistData
+from mediascan.artist_data import ArtistData, ArtistMember, Date
 from mediascan.artist_yaml_file import ArtistYamlFile
 
 """
@@ -33,17 +33,41 @@ language_codes = Language (ISO 639-1)
 ArtistDataPrimitive = dict[str, Union[str, list[str]]]
 
 
+def parse_date(value: object, field_name: str) -> Date | None:
+    """Build a Date from a mapping containing required y and optional m/d."""
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{field_name} must be a mapping with a y value")
+    date_values = cast(Mapping[str, object], value)
+    if "y" not in date_values:
+        raise ValueError(f"{field_name} is missing required y value")
+
+    return Date(
+        y=int(str(date_values["y"])),
+        m=(int(str(date_values["m"])) if date_values.get("m") is not None else None),
+        d=(int(str(date_values["d"])) if date_values.get("d") is not None else None),
+    )
+
+
 def get_path_depth(path: str):
     return len(path.strip(os.path.sep).split(os.path.sep))
 
 
 def write_yaml_file(filepath: Path, artist_data: ArtistDataPrimitive):
+    dob = parse_date(artist_data["dob"], "dob")
+    if dob is None:
+        raise ValueError("dob is required")
+    dod = parse_date(artist_data.get("dod"), "dod")
     ad = ArtistData(
         list(artist_data["artist_names"]),
         str(artist_data["city"]),
         str(artist_data["country_code"]),
         str(artist_data["region_code"]),
         list(artist_data["language_codes"]),
+        dob,
+        cast(list[ArtistMember], artist_data["members"]),
+        dod,
     )
     adf = ArtistYamlFile(ad)
     try:

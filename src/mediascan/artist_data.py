@@ -20,6 +20,15 @@ class Date(YAMLWizard, key_transform=LetterCase.CAMEL):
 
 
 @dataclass
+class ArtistMember(YAMLWizard, key_transform=LetterCase.CAMEL):
+    artist_names: list[str]
+    dob: Date
+    artist_bands: list[str]
+    artist_roles: list[str]
+    dod: Date | None = None
+
+
+@dataclass
 class ArtistData(YAMLWizard, key_transform=LetterCase.CAMEL):
     """
     ArtistData dataclass
@@ -32,7 +41,6 @@ class ArtistData(YAMLWizard, key_transform=LetterCase.CAMEL):
         region_code
         language_codes
     Optional fields:
-        dob (date of birth) this field is also used for the date or year a band was formed
         dod (date of death)
     """
 
@@ -41,7 +49,8 @@ class ArtistData(YAMLWizard, key_transform=LetterCase.CAMEL):
     country_code: str
     region_code: str
     language_codes: list[str]
-    dob: Date | None = None
+    dob: Date
+    members: list[ArtistMember]
     dod: Date | None = None
 
 

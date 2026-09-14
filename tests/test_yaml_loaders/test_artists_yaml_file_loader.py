@@ -10,20 +10,26 @@ artists:
   - artistData:
       artistNames:
         - The Example Band
+      dob:
+        y: 1990
       city: Example City
       countryCode: US
       regionCode: US-CA
       languageCodes:
         - en
+      members: []
     path: /music/The Example Band
   - artistData:
       artistNames:
         - The Example Band 2
+      dob:
+        y: 1991
       city: Example City 2
       countryCode: CA
       regionCode: CA-ON
       languageCodes:
         - en
+      members: []
     path: /music/The Example Band 2
 """
 

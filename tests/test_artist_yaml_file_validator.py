@@ -17,15 +17,26 @@ def artist_yaml(
     language_codes: list[str] | None = None,
 ) -> str:
     languages = language_codes if language_codes is not None else ["en"]
-    return f"""artistData:
-  artistNames:
-    - The Example Band
-  city: {city}
-  countryCode: {country_code}
-  regionCode: {region_code}
-  languageCodes:
-    - {languages[0]}
-"""
+    return yaml.safe_dump(
+        {
+            "artistData": {
+                "artistNames": ["The Example Band"],
+                "dob": {"y": 1990},
+                "city": city,
+                "countryCode": country_code,
+                "regionCode": region_code,
+                "languageCodes": languages,
+                "members": [
+                    {
+                        "artistNames": ["Example Member"],
+                        "dob": {"y": 1970},
+                        "artistBands": ["The Example Band"],
+                        "artistRoles": ["guitar"],
+                    }
+                ],
+            }
+        }
+    )
 
 
 def run_file_validation(
@@ -48,12 +59,56 @@ def run_file_validation(
 
 
 def test_validate_artist_yaml_content_accepts_valid_yaml() -> None:
-    validate_artist_yaml_content("artist: The Example Band\n")
+    validate_artist_yaml_content(artist_yaml())
 
 
 def test_validate_artist_yaml_content_rejects_invalid_yaml() -> None:
     with pytest.raises(yaml.YAMLError):
         validate_artist_yaml_content("artist: [unterminated\n")
+
+
+def test_validate_artist_yaml_content_accepts_empty_members_list() -> None:
+    validate_artist_yaml_content("""artistData:
+    artistNames:
+        - The Example Band
+    dob:
+        y: 1990
+    city: Example City
+    countryCode: US
+    regionCode: US-CA
+    languageCodes:
+        - en
+    members: []
+""")
+
+
+@pytest.mark.parametrize(
+    "missing_tag", ["artistNames", "dob", "artistBands", "artistRoles"]
+)
+def test_validate_artist_yaml_content_requires_member_tags(missing_tag: str) -> None:
+    member: dict[str, object] = {
+        "artistNames": ["Example Member"],
+        "dob": {"y": 1970},
+        "artistBands": ["The Example Band"],
+        "artistRoles": ["guitar"],
+    }
+    del member[missing_tag]
+    content = yaml.safe_dump(
+        {
+            "artistData": {
+                "artistNames": ["The Example Band"],
+                "dob": {"y": 1990},
+                "city": "Example City",
+                "countryCode": "US",
+                "regionCode": "US-CA",
+                "languageCodes": ["en"],
+                "members": [member],
+            }
+        }
+    )
+
+    with pytest.raises(ValueError, match=f"missing required tag '{missing_tag}'"):
+        validate_artist_yaml_content(content)
 
 
 def test_validate_artist_yaml_file_records_missing_file(tmp_path: Path) -> None:

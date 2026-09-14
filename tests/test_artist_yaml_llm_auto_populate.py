@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 
 import pytest
+import yaml
 
 if not os.environ.get("OPENAI_API_KEY"):
     pytest.skip(
@@ -21,15 +22,19 @@ def test_process_artist_yaml_files_skips_valid_artist_yaml(
     artist_path.mkdir()
     artist_yaml_path = artist_path / "artist.yml"
     artist_yaml_path.write_text(
-        """artistData:
-  artistNames:
-    - The Example Band
-  city: Example City
-  countryCode: US
-  regionCode: US-CA
-  languageCodes:
-    - en
-""",
+        yaml.safe_dump(
+            {
+                "artistData": {
+                    "artistNames": ["The Example Band"],
+                    "dob": {"y": 1990},
+                    "city": "Example City",
+                    "countryCode": "US",
+                    "regionCode": "US-CA",
+                    "languageCodes": ["en"],
+                    "members": [],
+                }
+            }
+        ),
         encoding="utf-8",
     )
     processed_files: set[Path] = set()
@@ -61,15 +66,19 @@ def test_process_artist_yaml_files_logs_validation_failure(
     artist_path.mkdir()
     artist_yaml_path = artist_path / "artist.yml"
     artist_yaml_path.write_text(
-        """artistData:
-  artistNames:
-    - The Example Band
-  city: Example City
-  countryCode: UK
-  regionCode: GB-LND
-  languageCodes:
-    - en
-""",
+        yaml.safe_dump(
+            {
+                "artistData": {
+                    "artistNames": ["The Example Band"],
+                    "dob": {"y": 1990},
+                    "city": "Example City",
+                    "countryCode": "UK",
+                    "regionCode": "GB-LND",
+                    "languageCodes": ["en"],
+                    "members": [],
+                }
+            }
+        ),
         encoding="utf-8",
     )
     processed_files: set[Path] = set()
