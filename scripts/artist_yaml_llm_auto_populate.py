@@ -1,12 +1,12 @@
 """
-Usage: python scripts/moongas_py_auto_artist_yaml.py [options]
+Usage: python scripts/artist_yaml_llm_auto_populate.py [options]
 
 It expects the environment variable MOONGAS_COLLECTION_ROOTDIR to be set,
 pointing to the root directory of the Moongas collection.
 
-MOONGAS_COLLECTION_ROOTDIR=$MOONGAS_COLLECTION_DEMO python moongas_py_auto_artist_yaml.py
+MOONGAS_COLLECTION_ROOTDIR=$MOONGAS_COLLECTION_DEMO python artist_yaml_llm_auto_populate.py
 
-MOONGAS_COLLECTION_ROOTDIR=$MOONGAS_COLLECTION_DEMO python moongas_py_auto_artist_yaml.py --clean
+MOONGAS_COLLECTION_ROOTDIR=$MOONGAS_COLLECTION_DEMO python artist_yaml_llm_auto_populate.py --clean
 
 Command line options:
   --clean    Remove all backup files before processing.
@@ -25,8 +25,12 @@ import tempfile
 import time
 
 from tqdm import tqdm
-import yaml
 from openai import APIStatusError, OpenAI
+
+from mediascan.artist_yaml_file_validator import (
+    validate_artist_yaml_content,
+    validate_artist_yaml_file,
+)
 
 # Configure with LOG_LEVEL=DEBUG for additional diagnostic detail.
 logging.basicConfig(
@@ -218,7 +222,7 @@ def process_artist_yaml_file(
             "[%s] Model response contains %d characters", filename, len(completed_yaml)
         )
 
-        yaml.safe_load(completed_yaml)
+        validate_artist_yaml_content(completed_yaml)
         logger.info("[%s] YAML validation passed", filename)
         logger.info("[%s] YAML after modification:\n%s", filename, completed_yaml)
 
@@ -318,7 +322,6 @@ def process_artist_yaml_files(
         logger.error("Input directory does not exist: %s", path.resolve())
         return False
 
-    reference_examples = load_reference_examples(LETTER_DIRS_FOR_REFERENCE_EXAMPLES)
     input_files = [
         input_file
         for input_file in load_input_files(letters_dirs_to_work)
@@ -330,6 +333,41 @@ def process_artist_yaml_files(
             letters_dirs_to_work,
         )
         return None
+
+    for input_file in input_files:
+        artists_missing: list[str] = []
+        exceptions: list[tuple[Path, Exception]] = []
+        validate_artist_yaml_file(
+            input_file.parent.name,
+            input_file.parent,
+            [str(input_file)],
+            artists_missing,
+            exceptions,
+        )
+        if not artists_missing and not exceptions:
+            processed_files.add(input_file)
+            logger.info("Skipping already-valid artist YAML file: %s", input_file)
+        else:
+            if artists_missing:
+                logger.warning(
+                    "Artist YAML validation failed for %s: artist.yml is missing",
+                    input_file,
+                )
+            for exception_path, exception in exceptions:
+                logger.warning(
+                    "Artist YAML validation failed for %s: %s",
+                    exception_path,
+                    exception,
+                )
+
+    input_files = [
+        input_file for input_file in input_files if input_file not in processed_files
+    ]
+    if not input_files:
+        logger.info("All matching files are already valid; exiting loop")
+        return None
+
+    reference_examples = load_reference_examples(LETTER_DIRS_FOR_REFERENCE_EXAMPLES)
 
     logger.info(
         "Selecting 1 random file from %d available file(s) with %d reference characters",
@@ -362,16 +400,17 @@ def main_loop(sleep_between_files: int):
     total_files = len(load_input_files(letter_dirs))
     with tqdm(total=total_files, desc="Processing files", unit="file") as progress:
         while True:
+            processed_count = len(processed_files)
             logger.info(
                 "Starting processing loop for letter directories: %s", letter_dirs
             )
             result = process_artist_yaml_files(
                 Path(MOONGAS_COLLECTION_ROOTDIR), letter_dirs, processed_files
             )
+            progress.update(len(processed_files) - processed_count)
             if result is None:
                 logger.info("All matching files have been processed; exiting loop")
                 return
-            progress.update(1)
             logger.info(
                 "Processing loop complete; sleeping for %d seconds",
                 sleep_between_files,
