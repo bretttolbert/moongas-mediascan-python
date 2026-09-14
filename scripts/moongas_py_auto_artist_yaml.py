@@ -1,9 +1,17 @@
 """
 Usage: python scripts/moongas_py_auto_artist_yaml.py [options]
 
+It expects the environment variable MOONGAS_COLLECTION_ROOTDIR to be set,
+pointing to the root directory of the Moongas collection.
+
 MOONGAS_COLLECTION_ROOTDIR=$MOONGAS_COLLECTION_DEMO python moongas_py_auto_artist_yaml.py
 
 MOONGAS_COLLECTION_ROOTDIR=$MOONGAS_COLLECTION_DEMO python moongas_py_auto_artist_yaml.py --clean
+
+Command line options:
+  --clean    Remove all backup files before processing.
+  --sleep    Pause execution for a short period before processing.
+  --help     Show this help message and exit.
 
 """
 
