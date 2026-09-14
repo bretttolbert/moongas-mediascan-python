@@ -64,8 +64,8 @@ stats = [
   "numpy>=2.5.2 ; python_version >= '3.12'",
 ]
 llm = [
-    "openai>=3.13.0",
-    "PyYAML>=6.0.3",
+  "openai>=3.13.0",
+  "PyYAML>=6.0.3",
   "tqdm>=4.67.0",
 ]
 

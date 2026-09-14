@@ -368,7 +368,13 @@ def main_loop(sleep_between_files: int):
                 "Processing loop complete; sleeping for %d seconds",
                 sleep_between_files,
             )
-            time.sleep(sleep_between_files)
+            for _ in tqdm(
+                range(sleep_between_files),
+                desc="Sleeping",
+                bar_format="{desc}: |{bar}| {remaining} remaining",
+                leave=False,
+            ):
+                time.sleep(1)
 
 
 if __name__ == "__main__":
