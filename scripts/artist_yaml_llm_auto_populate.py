@@ -193,6 +193,20 @@ def try_load_artist_yaml_for_skip(input_path: Path) -> bool:
     return False
 
 
+def validate_llm_yaml_content(content: str, filename: str) -> None:
+    """Validate LLM YAML syntax while allowing incomplete schema fields to be saved."""
+    try:
+        validate_artist_yaml_content(content)
+    except ValueError as exception:
+        logger.warning(
+            "[%s] LLM YAML has validation warnings; saving response for further processing: %s",
+            filename,
+            exception,
+        )
+    else:
+        logger.info("[%s] YAML validation passed", filename)
+
+
 def process_artist_yaml_file(
     input_path: Path,
     reference_examples: str,
@@ -246,8 +260,7 @@ def process_artist_yaml_file(
             "[%s] Model response contains %d characters", filename, len(completed_yaml)
         )
 
-        validate_artist_yaml_content(completed_yaml)
-        logger.info("[%s] YAML validation passed", filename)
+        validate_llm_yaml_content(completed_yaml, filename)
         logger.info("[%s] YAML after modification:\n%s", filename, completed_yaml)
 
         backup_path = input_path.with_name(f"{input_path.name}.bak")
