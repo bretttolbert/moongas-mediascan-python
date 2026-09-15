@@ -83,7 +83,7 @@ def test_validate_artist_yaml_content_accepts_empty_members_list() -> None:
 
 
 @pytest.mark.parametrize(
-    "missing_tag", ["artistNames", "dob", "artistBands", "artistRoles"]
+    "missing_tag", ["artistNames"]
 )
 def test_validate_artist_yaml_content_requires_member_tags(missing_tag: str) -> None:
     member: dict[str, object] = {

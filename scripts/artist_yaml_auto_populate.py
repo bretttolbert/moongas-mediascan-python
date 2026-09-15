@@ -16,18 +16,18 @@ Command line options:
 """
 
 import argparse
-import os
 import logging
-from pathlib import Path
+import os
 import random
 import re
 import shutil
 import tempfile
 import time
+from pathlib import Path
 
 from dataclass_wizard.v0.errors import MissingFields
-from tqdm import tqdm
 from openai import APIStatusError, OpenAI
+from tqdm import tqdm
 
 from mediascan.artist_yaml_file import ArtistYamlFile
 from mediascan.artist_yaml_file_validator import (
@@ -101,6 +101,16 @@ SYSTEM_PROMPT = """You are an automated data-filling assistant.
 Your job is to read the provided incomplete YAML file and fill in the missing values or inferred fields.
 Maintain the exact schema. Return ONLY the valid YAML content. 
 Do not include markdown code blocks (like ```yaml), explanations, or opening/closing text."""
+
+
+def parse_boolean(value: str) -> bool:
+    """Parse a command-line boolean value."""
+    normalized_value = value.lower()
+    if normalized_value == "true":
+        return True
+    if normalized_value == "false":
+        return False
+    raise argparse.ArgumentTypeError("expected true or false")
 
 
 def load_reference_examples(letters_dirs_to_work: list[str]) -> str:
@@ -218,7 +228,7 @@ def remove_duplicate_members_lists(content: str) -> str:
 
     artist_data_indent = artist_data_match.group("indent")
     first_member_match = re.search(
-        rf"^(?P<indent>{re.escape(artist_data_indent)}[ \t]+)members:[ \t]*$",
+        rf"^(?P<indent>{re.escape(artist_data_indent)}[ \t]+)members:(?:[ \t]+[^#]*)?[ \t]*$",
         content[artist_data_match.end() :],
         re.MULTILINE,
     )
@@ -226,7 +236,9 @@ def remove_duplicate_members_lists(content: str) -> str:
         return content
 
     member_indent = first_member_match.group("indent")
-    member_key = re.compile(rf"^{re.escape(member_indent)}members:[ \t]*$")
+    member_key = re.compile(
+        rf"^{re.escape(member_indent)}members:(?:[ \t]+[^#]*)?[ \t]*$"
+    )
     lines = content.splitlines(keepends=True)
     artist_data_line = content[: artist_data_match.start()].count("\n")
     found_members = False
@@ -288,6 +300,7 @@ def process_artist_yaml_file(
     reference_examples: str,
     file_number: int,
     total_files: int,
+    llm_enabled: bool = True,
 ) -> bool:
     filename = input_path.name
     started_at = time.monotonic()
@@ -300,6 +313,10 @@ def process_artist_yaml_file(
             raw_yaml = f.read()
         logger.debug("Read %d characters from %s", len(raw_yaml), input_path)
         logger.info("[%s] YAML before modification:\n%s", filename, raw_yaml)
+
+        if not llm_enabled:
+            logger.info("[%s] LLM lookup disabled; leaving file unchanged", filename)
+            return True
 
         # Call the LLM to fill in the info
         prompt = (
@@ -420,7 +437,10 @@ def process_artist_yaml_file(
 
 
 def process_artist_yaml_files(
-    path: Path, letters_dirs_to_work: list[str], processed_files: set[Path]
+    path: Path,
+    letters_dirs_to_work: list[str],
+    processed_files: set[Path],
+    llm_enabled: bool = True,
 ) -> bool | None:
     logger.info("Starting YAML processing")
     logger.info("Input directory: %s", path.resolve())
@@ -492,7 +512,11 @@ def process_artist_yaml_files(
     selected_file = random.choice(input_files)
     processed_files.add(selected_file)
     logger.info("Selected random input file: %s", selected_file)
-    results = [process_artist_yaml_file(selected_file, reference_examples, 1, 1)]
+    results = [
+        process_artist_yaml_file(
+            selected_file, reference_examples, 1, 1, llm_enabled=llm_enabled
+        )
+    ]
     succeeded = sum(results)
     failed = len(results) - succeeded
     logger.info("Batch complete: %d succeeded, %d failed", succeeded, failed)
@@ -500,16 +524,19 @@ def process_artist_yaml_files(
 
 
 def clean():
-    logger.info("Cleaning up backup files in the collection root directory")
+    logger.info("Cleaning up backup files in the collection root directory: %s", MOONGAS_COLLECTION_ROOTDIR)
+    count_removed = 0
     for backup_file in Path(MOONGAS_COLLECTION_ROOTDIR).rglob("*.bak"):
         try:
             backup_file.unlink()
+            count_removed += 1
             logger.info("Removed backup file: %s", backup_file)
         except Exception as e:
             logger.warning("Failed to remove backup file %s: %s", backup_file, e)
+    logger.info("Removed a total of %d backup file(s)", count_removed)
 
 
-def main_loop(sleep_between_files: int):
+def main_loop(sleep_between_files: int, llm_enabled: bool = True):
     processed_files: set[Path] = set()
     letter_dirs = LETTER_DIRS_NEEDING_WORK
     collection_root = Path(MOONGAS_COLLECTION_ROOTDIR)
@@ -518,6 +545,9 @@ def main_loop(sleep_between_files: int):
         "Pre-pass removed duplicate members lists from %d artist YAML file(s)",
         cleaned_count,
     )
+    if not llm_enabled:
+        logger.info("LLM lookup disabled; exiting after duplicate members pre-pass")
+        return
     total_files = len(load_input_files(letter_dirs))
     with tqdm(total=total_files, desc="Processing files", unit="file") as progress:
         while True:
@@ -526,7 +556,7 @@ def main_loop(sleep_between_files: int):
                 "Starting processing loop for letter directories: %s", letter_dirs
             )
             result = process_artist_yaml_files(
-                collection_root, letter_dirs, processed_files
+                collection_root, letter_dirs, processed_files, llm_enabled=llm_enabled
             )
             progress.update(len(processed_files) - processed_count)
             if result is None:
@@ -560,12 +590,19 @@ if __name__ == "__main__":
         default=30,
         help="Seconds to sleep between processing loops (default: 30).",
     )
+    parser.add_argument(
+        "--llm",
+        type=parse_boolean,
+        default=True,
+        metavar="true|false",
+        help="Enable LLM lookups (default: true). Use --llm=false for pre-pass only.",
+    )
     args = parser.parse_args()
 
     if args.clean:
         clean()
     else:
         try:
-            main_loop(args.sleep)
+            main_loop(args.sleep, args.llm)
         except KeyboardInterrupt:
             logger.info("Interrupted by user; exiting")

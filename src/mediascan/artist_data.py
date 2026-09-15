@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 from dataclass_wizard.v0 import YAMLWizard
 from dataclass_wizard.v0.enums import LetterCase
 
@@ -22,9 +23,9 @@ class Date(YAMLWizard, key_transform=LetterCase.CAMEL):
 @dataclass
 class ArtistMember(YAMLWizard, key_transform=LetterCase.CAMEL):
     artist_names: list[str]
-    dob: Date
-    artist_bands: list[str]
-    artist_roles: list[str]
+    artist_bands: list[str] | None = None
+    artist_roles: list[str] | None = None
+    dob: Date | None = None
     dod: Date | None = None
 
 
@@ -49,8 +50,8 @@ class ArtistData(YAMLWizard, key_transform=LetterCase.CAMEL):
     country_code: str
     region_code: str
     language_codes: list[str]
-    dob: Date
     members: list[ArtistMember]
+    dob: Date | None = None
     dod: Date | None = None
 
 
