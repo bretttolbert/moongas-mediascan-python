@@ -80,14 +80,20 @@ def validate_artist_yaml_file(
             raise Exception(
                 f"invalid regionCode '{adf.artist_data.region_code}' (missing hyphen)"
             )
-        if adf.artist_data.country_code != adf.artist_data.country_code.upper():
-            raise Exception("invalid countryCode (lowercase letters are not allowed")
-        if adf.artist_data.region_code != adf.artist_data.region_code.upper():
-            raise Exception("invalid regionCode (lowercase letters are not allowed")
+        code = adf.artist_data.country_code
+        code_up = adf.artist_data.country_code.upper()
+        if code != code_up:
+            raise Exception("invalid countryCode (lowercase letters are not allowed, {} != {})".format(code, code_up))
+        code = adf.artist_data.region_code
+        code_up = adf.artist_data.region_code.upper()
+        if code != code_up:
+            raise Exception("invalid regionCode (lowercase letters are not allowed, {} != {})".format(code, code_up))
         for language_code in adf.artist_data.language_codes:
-            if language_code != language_code.lower():
+            code = language_code
+            code_up = language_code.upper()
+            if code != code.lower():
                 raise Exception(
-                    "invalid languageCode (uppercase letters are not allowed)"
+                    "invalid languageCode (uppercase letters are not allowed, {} != {})".format(code, code_up)
                 )
         if adf.artist_data.country_code == "":
             raise Exception("invalid countryCode (must not be empty)")

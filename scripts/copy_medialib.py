@@ -1,9 +1,10 @@
-from enum import Enum
-from pathlib import Path
 import argparse
+import fnmatch
 import hashlib
 import os
 import shutil
+from enum import Enum
+from pathlib import Path
 from typing import NamedTuple
 
 from mediascan.utils.log import log_arguments
@@ -87,8 +88,11 @@ def copy_medialib(
     for root, dirs, files in os.walk(src_path, topdown=False):
         for src_fname in files:
             src_file_abs_path = Path(root).joinpath(src_fname)
-            # skip any files not specifically included
-            if src_fname not in include_filenames:
+            # skip any files not matching at least one include filename glob pattern
+            if not any(
+                fnmatch.fnmatch(src_fname, pattern)
+                for pattern in include_filenames
+            ):
                 print(
                     f"Skipping file '{src_file_abs_path}' because its filename is not included"
                 )
@@ -289,7 +293,7 @@ def parse_args():
         "--include-filenames",
         nargs="+",
         default=["cover.jpg"],
-        help="Filename patterns to include (e.g., cover.jpg artist.yml).",
+        help="Filename glob patterns to include (e.g., cover.jpg artist.yml *.lrc *.txt).",
     )
     parser.add_argument(
         "-e",
