@@ -209,7 +209,7 @@ def validate_llm_yaml_content(content: str, filename: str) -> None:
 
 
 def remove_duplicate_members_lists(content: str) -> str:
-    """Keep only the first direct ``members`` list under ``artistData``."""
+    """Merge duplicate direct ``members`` lists under ``artistData``."""
     artist_data_match = re.search(
         r"^(?P<indent>[ \t]*)artistData:[ \t]*$", content, re.MULTILINE
     )
@@ -217,9 +217,16 @@ def remove_duplicate_members_lists(content: str) -> str:
         return content
 
     artist_data_indent = artist_data_match.group("indent")
-    member_indent = f"{artist_data_indent}  "
+    first_member_match = re.search(
+        rf"^(?P<indent>{re.escape(artist_data_indent)}[ \t]+)members:[ \t]*$",
+        content[artist_data_match.end() :],
+        re.MULTILINE,
+    )
+    if first_member_match is None:
+        return content
+
+    member_indent = first_member_match.group("indent")
     member_key = re.compile(rf"^{re.escape(member_indent)}members:[ \t]*$")
-    sibling_key = re.compile(rf"^{re.escape(member_indent)}[^ \t#][^:]*:[ \t]*")
     lines = content.splitlines(keepends=True)
     artist_data_line = content[: artist_data_match.start()].count("\n")
     found_members = False
@@ -240,10 +247,40 @@ def remove_duplicate_members_lists(content: str) -> str:
             continue
 
         line_number += 1
-        while line_number < len(lines) and not sibling_key.match(lines[line_number]):
-            line_number += 1
 
     return "".join(cleaned_lines)
+
+
+def remove_duplicate_members_lists_from_root(root_dir: Path) -> int:
+    """Remove duplicate ``members`` lists from every artist YAML under a root."""
+    artist_yaml_paths = sorted(root_dir.rglob("artist.yml"))
+    logger.info(
+        "Scanning %d artist YAML file(s) under %s for duplicate members lists",
+        len(artist_yaml_paths),
+        root_dir,
+    )
+    cleaned_count = 0
+    for artist_yaml_path in artist_yaml_paths:
+        logger.debug("Checking %s for duplicate members lists", artist_yaml_path)
+        raw_yaml = artist_yaml_path.read_text(encoding="utf-8")
+        normalized_yaml = remove_duplicate_members_lists(raw_yaml)
+        if normalized_yaml == raw_yaml:
+            logger.debug("No duplicate members lists found in %s", artist_yaml_path)
+            continue
+        artist_yaml_path.write_text(normalized_yaml, encoding="utf-8")
+        cleaned_count += 1
+        logger.info(
+            "Merged duplicate members lists and overwrote %s (%d -> %d characters)",
+            artist_yaml_path,
+            len(raw_yaml),
+            len(normalized_yaml),
+        )
+    logger.info(
+        "Completed duplicate members scan: %d modified, %d unchanged",
+        cleaned_count,
+        len(artist_yaml_paths) - cleaned_count,
+    )
+    return cleaned_count
 
 
 def process_artist_yaml_file(
@@ -411,11 +448,6 @@ def process_artist_yaml_files(
         return None
 
     for input_file in input_files:
-        raw_yaml = input_file.read_text(encoding="utf-8")
-        normalized_yaml = remove_duplicate_members_lists(raw_yaml)
-        if normalized_yaml != raw_yaml:
-            input_file.write_text(normalized_yaml, encoding="utf-8")
-            logger.info("Removed duplicate members lists from %s", input_file)
         if not try_load_artist_yaml_for_skip(input_file):
             continue
         artists_missing: list[str] = []
@@ -480,6 +512,12 @@ def clean():
 def main_loop(sleep_between_files: int):
     processed_files: set[Path] = set()
     letter_dirs = LETTER_DIRS_NEEDING_WORK
+    collection_root = Path(MOONGAS_COLLECTION_ROOTDIR)
+    cleaned_count = remove_duplicate_members_lists_from_root(collection_root)
+    logger.info(
+        "Pre-pass removed duplicate members lists from %d artist YAML file(s)",
+        cleaned_count,
+    )
     total_files = len(load_input_files(letter_dirs))
     with tqdm(total=total_files, desc="Processing files", unit="file") as progress:
         while True:
@@ -488,7 +526,7 @@ def main_loop(sleep_between_files: int):
                 "Starting processing loop for letter directories: %s", letter_dirs
             )
             result = process_artist_yaml_files(
-                Path(MOONGAS_COLLECTION_ROOTDIR), letter_dirs, processed_files
+                collection_root, letter_dirs, processed_files
             )
             progress.update(len(processed_files) - processed_count)
             if result is None:

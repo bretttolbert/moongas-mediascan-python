@@ -14,7 +14,7 @@ if not os.environ.get("OPENAI_API_KEY"):
 import scripts.artist_yaml_llm_auto_populate as auto_populate
 
 
-def test_remove_duplicate_members_lists_keeps_first_list() -> None:
+def test_remove_duplicate_members_lists_merges_lists() -> None:
     content = """artistData:
     artistNames:
         - The Example Band
@@ -29,10 +29,40 @@ def test_remove_duplicate_members_lists_keeps_first_list() -> None:
 
     normalized = auto_populate.remove_duplicate_members_lists(content)
 
-    assert normalized.count("  members:\n") == 1
+    assert normalized.count("    members:\n") == 1
     assert "First Member" in normalized
-    assert "Duplicate Member" not in normalized
-    assert "  city: Example City\n" in normalized
+    assert "Duplicate Member" in normalized
+    assert "    city: Example City\n" in normalized
+
+
+def test_remove_duplicate_members_lists_from_root_cleans_all_artist_yaml_files(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.INFO)
+    duplicate_content = """artistData:
+  members:
+    - artistNames:
+        - First Member
+  members:
+    - artistNames:
+        - Duplicate Member
+"""
+    first_path = tmp_path / "A" / "First Artist" / "artist.yml"
+    second_path = tmp_path / "Z" / "Second Artist" / "artist.yml"
+    first_path.parent.mkdir(parents=True)
+    second_path.parent.mkdir(parents=True)
+    first_path.write_text(duplicate_content, encoding="utf-8")
+    second_path.write_text(duplicate_content, encoding="utf-8")
+
+    cleaned_count = auto_populate.remove_duplicate_members_lists_from_root(tmp_path)
+
+    assert cleaned_count == 2
+    assert first_path.read_text(encoding="utf-8").count("  members:\n") == 1
+    assert second_path.read_text(encoding="utf-8").count("  members:\n") == 1
+    assert "First Member" in first_path.read_text(encoding="utf-8")
+    assert "Duplicate Member" in second_path.read_text(encoding="utf-8")
+    assert "Scanning 2 artist YAML file(s)" in caplog.text
+    assert "Completed duplicate members scan: 2 modified, 0 unchanged" in caplog.text
 
 
 def test_process_artist_yaml_files_skips_valid_artist_yaml(
