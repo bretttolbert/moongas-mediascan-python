@@ -14,6 +14,27 @@ if not os.environ.get("OPENAI_API_KEY"):
 import scripts.artist_yaml_llm_auto_populate as auto_populate
 
 
+def test_remove_duplicate_members_lists_keeps_first_list() -> None:
+    content = """artistData:
+    artistNames:
+        - The Example Band
+    members:
+        - artistNames:
+                - First Member
+    members:
+        - artistNames:
+                - Duplicate Member
+    city: Example City
+"""
+
+    normalized = auto_populate.remove_duplicate_members_lists(content)
+
+    assert normalized.count("  members:\n") == 1
+    assert "First Member" in normalized
+    assert "Duplicate Member" not in normalized
+    assert "  city: Example City\n" in normalized
+
+
 def test_process_artist_yaml_files_skips_valid_artist_yaml(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:

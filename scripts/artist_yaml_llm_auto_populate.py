@@ -20,6 +20,7 @@ import os
 import logging
 from pathlib import Path
 import random
+import re
 import shutil
 import tempfile
 import time
@@ -207,6 +208,44 @@ def validate_llm_yaml_content(content: str, filename: str) -> None:
         logger.info("[%s] YAML validation passed", filename)
 
 
+def remove_duplicate_members_lists(content: str) -> str:
+    """Keep only the first direct ``members`` list under ``artistData``."""
+    artist_data_match = re.search(
+        r"^(?P<indent>[ \t]*)artistData:[ \t]*$", content, re.MULTILINE
+    )
+    if artist_data_match is None:
+        return content
+
+    artist_data_indent = artist_data_match.group("indent")
+    member_indent = f"{artist_data_indent}  "
+    member_key = re.compile(rf"^{re.escape(member_indent)}members:[ \t]*$")
+    sibling_key = re.compile(rf"^{re.escape(member_indent)}[^ \t#][^:]*:[ \t]*")
+    lines = content.splitlines(keepends=True)
+    artist_data_line = content[: artist_data_match.start()].count("\n")
+    found_members = False
+    cleaned_lines: list[str] = []
+    line_number = 0
+
+    while line_number < len(lines):
+        line = lines[line_number]
+        if line_number <= artist_data_line or not member_key.match(line):
+            cleaned_lines.append(line)
+            line_number += 1
+            continue
+
+        if not found_members:
+            found_members = True
+            cleaned_lines.append(line)
+            line_number += 1
+            continue
+
+        line_number += 1
+        while line_number < len(lines) and not sibling_key.match(lines[line_number]):
+            line_number += 1
+
+    return "".join(cleaned_lines)
+
+
 def process_artist_yaml_file(
     input_path: Path,
     reference_examples: str,
@@ -253,7 +292,7 @@ def process_artist_yaml_file(
         content = response.choices[0].message.content
         if content is None:
             raise ValueError("Model response did not contain YAML content")
-        completed_yaml = content.strip()
+        completed_yaml = remove_duplicate_members_lists(content.strip())
         if not completed_yaml:
             raise ValueError("Model response contained empty YAML content")
         logger.info(
@@ -372,6 +411,11 @@ def process_artist_yaml_files(
         return None
 
     for input_file in input_files:
+        raw_yaml = input_file.read_text(encoding="utf-8")
+        normalized_yaml = remove_duplicate_members_lists(raw_yaml)
+        if normalized_yaml != raw_yaml:
+            input_file.write_text(normalized_yaml, encoding="utf-8")
+            logger.info("Removed duplicate members lists from %s", input_file)
         if not try_load_artist_yaml_for_skip(input_file):
             continue
         artists_missing: list[str] = []
