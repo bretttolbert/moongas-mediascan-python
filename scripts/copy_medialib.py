@@ -43,6 +43,7 @@ def copy_medialib(
     dir_copy_mode: DirCopyMode = DirCopyMode.PreserveStructure,
     overwrite_existing: bool = False,
     overwrite_newer: bool = False,
+    make_track_yml: bool = False,
 ) -> CopyResults:
     """
     Recursively copy files (e.g. album cover images) from src medialib directory
@@ -50,6 +51,10 @@ def copy_medialib(
 
     src_path : path e.g. '/data/Music'
     dst_path : path e.g. '/data/Covers/Music'
+
+    If make_track_yml is True, no files are copied; instead an empty .yml file
+    is created in the destination for each included source file, with the same
+    base name (e.g. '01 - Song.lrc' -> '01 - Song.yml').
 
     Dir Copy Modes:
         1. SingleDirectory
@@ -116,11 +121,15 @@ def copy_medialib(
             if dir_copy_mode == DirCopyMode.SingleDirectory:
                 # This mode is for creating flat dir full of images, etc.
                 # so we need to make the filenames unique
-                dst_fname: str = str(ret.would_be_copied + 1).rjust(5, "0") + src_ext
+                dst_ext = ".yml" if make_track_yml else src_ext
+                dst_fname: str = str(ret.would_be_copied + 1).rjust(5, "0") + dst_ext
                 dst_abs_path = dst_abs_path.joinpath(dst_fname)
             elif dir_copy_mode == DirCopyMode.PreserveStructure:
                 # This mode retains the original filename exactly
                 dst_abs_path = dst_abs_path.joinpath(src_file_rel_path)
+                if make_track_yml:
+                    # strip the source extension and use .yml instead
+                    dst_abs_path = dst_abs_path.with_suffix(".yml")
 
             if dst_abs_path.exists() and _files_have_same_hash(
                 src_file_abs_path, dst_abs_path
@@ -153,7 +162,7 @@ def copy_medialib(
             # consequently I want to skip copying jpegs that have already been
             # converted)
             if overwrite_existing or not dst_abs_path.exists():
-                if src_ext == ".jpg":
+                if not make_track_yml and src_ext == ".jpg":
                     dst_fbase, _ = os.path.splitext(dst_abs_path)
                     dst_abs_path_converted = Path(dst_fbase + ".webp")
                     if dst_abs_path_converted.exists() and not overwrite_existing:
@@ -165,7 +174,10 @@ def copy_medialib(
                         continue
 
                 if not dry_run:
-                    shutil.copy(src_file_abs_path, dst_abs_path)
+                    if make_track_yml:
+                        dst_abs_path.write_text("")
+                    else:
+                        shutil.copy(src_file_abs_path, dst_abs_path)
                     ret = ret._replace(actually_copied=ret.actually_copied + 1)
                 ret = ret._replace(would_be_copied=ret.would_be_copied + 1)
             else:
@@ -187,6 +199,7 @@ def copy_medialibs(
     dir_copy_mode: DirCopyMode = DirCopyMode.PreserveStructure,
     overwrite_existing: bool = False,
     overwrite_newer: bool = False,
+    make_track_yml: bool = False,
 ) -> CopyResults:
     """
     Copies files* from one or more medialib directories from src directory to
@@ -230,6 +243,7 @@ def copy_medialibs(
             dry_run=dry_run,
             overwrite_existing=overwrite_existing,
             overwrite_newer=overwrite_newer,
+            make_track_yml=make_track_yml,
         )
         print(
             f"Total copied for medialib dir {src_path}: would be copied: {ret_tmp.would_be_copied}; actually copied: {ret_tmp.actually_copied}; skipped: {ret_tmp.skipped}; errors: {ret_tmp.errors};"
@@ -326,6 +340,11 @@ def parse_args():
         default=DirCopyMode.PreserveStructure,
         help="Directory structure copy mode.",
     )
+    parser.add_argument(
+        "--make-track-yml",
+        action="store_true",
+        help="Instead of copying files, create an empty .yml file per included file (same base name).",
+    )
 
     return parser.parse_args()
 
@@ -342,6 +361,7 @@ def main():
         overwrite_existing=args.overwrite_existing,
         dir_copy_mode=args.dir_copy_mode,
         overwrite_newer=args.overwrite_newer,
+        make_track_yml=args.make_track_yml,
     )
 
 
