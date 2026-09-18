@@ -1,16 +1,17 @@
-from pathlib import Path
+import logging
 import os
 import sys
+from pathlib import Path
 
 import pytest
 
+from scripts.convert_covers import convert_medialibs_cover_images_inplace
 from scripts.copy_medialib import (
+    DirCopyMode,
     copy_medialib,
     copy_medialibs,
-    DirCopyMode,
     parse_args,
 )
-from scripts.convert_covers import convert_medialibs_cover_images_inplace
 
 
 def test_copy_covers(tmp_path: Path) -> None:
@@ -35,7 +36,7 @@ def test_copy_all(tmp_path: Path):
 
 
 def test_copy_medialib_does_not_overwrite_newer_destination(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     src_path = tmp_path / "src"
     dst_path = tmp_path / "dst"
@@ -48,20 +49,20 @@ def test_copy_medialib_does_not_overwrite_newer_destination(
     os.utime(src_file, (100, 100))
     os.utime(dst_file, (200, 200))
 
-    count = copy_medialib(
-        src_path,
-        dst_path,
-        include_filenames=["cover.jpg"],
-        overwrite_existing=False,
-    )
+    with caplog.at_level(logging.DEBUG):
+        count = copy_medialib(
+            src_path,
+            dst_path,
+            include_filenames=["cover.jpg"],
+            overwrite_existing=False,
+        )
 
     assert count.skipped == 1
     assert count.actually_copied == 0
     assert dst_file.read_text() == "newer destination"
-    captured = capsys.readouterr()
     assert (
         f"Skipping file '{src_file}' because the destination file '{dst_file}' is newer"
-        in captured.out
+        in caplog.text
     )
 
 
@@ -90,7 +91,7 @@ def test_copy_medialib_overwrites_older_destination(tmp_path: Path) -> None:
 
 
 def test_copy_medialib_skips_identical_destination(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     src_path = tmp_path / "src"
     dst_path = tmp_path / "dst"
@@ -103,20 +104,20 @@ def test_copy_medialib_skips_identical_destination(
     os.utime(src_file, (100, 100))
     os.utime(dst_file, (200, 200))
 
-    result = copy_medialib(
-        src_path,
-        dst_path,
-        include_filenames=["cover.jpg"],
-        overwrite_existing=True,
-        overwrite_newer=False,
-    )
+    with caplog.at_level(logging.DEBUG):
+        result = copy_medialib(
+            src_path,
+            dst_path,
+            include_filenames=["cover.jpg"],
+            overwrite_existing=True,
+            overwrite_newer=False,
+        )
 
     assert result.actually_copied == 0
     assert result.skipped == 1
-    captured = capsys.readouterr()
     assert (
         f"Skipping file '{src_file}' because it is identical to destination file "
-        f"'{dst_file}'" in captured.out
+        f"'{dst_file}'" in caplog.text
     )
 
 
