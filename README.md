@@ -42,7 +42,7 @@ python -m pip install -e ".[dev,llm,stats]"
 - `[dev]` - development dependencies (includes `pytest` and `ruff`)
 - `[stats]` - statistics script dependencies (includes `matplotlib` and `numpy`)
 
-## Media Scripts
+## Scripts
 
 This Python package includes various console scripts for working with Moongas media collections. The included script `mediascripts` can be used to list them. All scripts accept the `-h` (_help_) command-line argument to display usage information.
 
