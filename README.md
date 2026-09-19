@@ -1,3 +1,5 @@
+<img src="https://raw.githubusercontent.com/bretttolbert/moongas-mediatunes-web/refs/heads/main/client/public/moongas.svg" width="128" height="128">
+
 # moongas-py-mediascan
 
 > 🚧 **Status: Work in Progress (WIP)**  
@@ -10,8 +12,6 @@
 **Python library for working with moongas mediascan database files and metadata files.**
 
 ### A component of the `moongas` ecosystem of media library tools
-
-![Moongas icon](./client/public/moongas.svg)
 
 - [moongas-mediatunes-web](https://github.com/bretttolbert/moongas-mediatunes-web) [![CI](https://github.com/bretttolbert/moongas-py-mediaserver/actions/workflows/ci.yml/badge.svg)](https://github.com/bretttolbert/moongas-mediatunes-web/actions/workflows/ci.yml) - A Deno-tooled TypeScript/Vue SPA for Moongas hybrid media collections, pairing with the separate moongas-py-mediatunes-svc backend to seemlessly blend offline and streaming playback
 - [moongas-py-mediatunes-svc](https://github.com/bretttolbert/moongas-py-mediatunes-svc) [![CI](https://github.com/bretttolbert/moongas-py-mediaserver/actions/workflows/ci.yml/badge.svg)](https://github.com/bretttolbert/moongas-py-mediatunes-svc/actions/workflows/ci.yml) - Python+BlackSheep API service for Moongas hybrid media collections—backend for moongas-mediatunes-web application
