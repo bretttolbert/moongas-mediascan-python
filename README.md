@@ -44,11 +44,11 @@ python -m pip install -e ".[dev,llm,stats]"
 
 ## Media Scripts
 
-This Python package includes various console scripts for working with Moongas media collections. The included script `media-scripts` can be used to list them. All scripts accept the `-h` (_help_) command-line argument to display usage information.
+This Python package includes various console scripts for working with Moongas media collections. The included script `mediascripts` can be used to list them. All scripts accept the `-h` (_help_) command-line argument to display usage information.
 
 
 ```bash
-$ media-scripts
+$ mediascripts
 artist:
   artist-countries-to-mapgraph-json
   artist-csv-to-artist-yaml
