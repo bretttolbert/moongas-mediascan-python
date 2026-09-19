@@ -42,3 +42,33 @@ python -m pip install -e ".[dev,llm,stats]"
 - `[dev]` - development dependencies (includes `pytest` and `ruff`)
 - `[stats]` - statistics script dependencies (includes `matplotlib` and `numpy`)
 
+## Media Scripts
+
+This Python package includes various console scripts for working with Moongas media collections. The included script `media-scripts` can be used to list them. All scripts accept the `-h` (_help_) command-line argument to display usage information.
+
+
+```bash
+$ media-scripts
+artist:
+  artist-countries-to-mapgraph-json
+  artist-csv-to-artist-yaml
+  artist-yaml-auto-populate
+  artist-yaml-reformat-with-files-yaml
+  artist-yaml-test-with-files-yaml
+  list-missing-region-names
+convert:
+  convert-covers
+  convert-videos
+  make-covers-video
+copy:
+  copy-medialib
+dev:
+  generate-dataclasses
+media_files_yaml:
+  list-artists-from-files-yaml
+  play-rand-file-from-files-yaml
+rename:
+  rename-album-files
+stats:
+  mediastats
+```

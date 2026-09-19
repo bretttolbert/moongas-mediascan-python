@@ -3,12 +3,15 @@ Reads artists countries data from mediascan database
 Outputs mapgraph json data file with artist and track count for each country
 """
 
+import argparse
+import json
+import shutil
+import subprocess
+from typing import Any, Callable, TypedDict
+
 import pandas as pd
 from sqlalchemy import create_engine
-from typing import Any, Callable, TypedDict
-import json
-import subprocess
-import shutil
+
 
 class MapGraphData(TypedDict):
     nodeIdSource: str
@@ -122,9 +125,18 @@ def artist_counts_mapgraph_dataset(
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Outputs mapgraph JSON data files with artist counts per country and US state."
+    )
+    parser.add_argument(
+        "--mapgraph-datasets-path",
+        default="/home/brett/Git/bretttolbert/bretttolbert.com.local/assets/projects/mapgraph/datasets",
+        help="Base path of the mapgraph datasets directory (default: %(default)s)",
+    )
+    args = parser.parse_args()
     artist_counts_mapgraph_dataset(
         "mediaserver-artist-country-counts.json",
-        "/home/brett/Git/bretttolbert/bretttolbert.com.local/assets/projects/mapgraph/datasets/world/",
+        f"{args.mapgraph_datasets_path}/world/",
         "country_codes.json",
         convert_country_code_to_country_code,
         get_country_code_from_tuple,
@@ -132,7 +144,7 @@ def main():
     )
     artist_counts_mapgraph_dataset(
         "mediaserver-artist-us-state-counts.json",
-        "/home/brett/Git/bretttolbert/bretttolbert.com.local/assets/projects/mapgraph/datasets/us-states/",
+        f"{args.mapgraph_datasets_path}/us-states/",
         "state_codes.json",
         convert_state_code_to_region_code,
         get_region_code_from_tuple,

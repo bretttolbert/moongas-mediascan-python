@@ -1,8 +1,9 @@
+import argparse
 import os
 from pathlib import Path
 
-from mediascan.media_files_yaml_file_loader import load_media_files_yaml_file
 from mediascan.artist_yaml_file_validator import validate_artist_yaml_file
+from mediascan.media_files_yaml_file_loader import load_media_files_yaml_file
 
 """
 Tests whether media library artist dirs have valid artists.yml file
@@ -40,13 +41,31 @@ def excluded(path: Path) -> bool:
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Tests whether media library artist dirs have valid artist.yml files."
+    )
+    parser.add_argument(
+        "--files-yaml-path",
+        default="../../out/files.yml",
+        help="Path to the files YAML file (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--source-path",
+        dest="source_paths",
+        action="append",
+        help="Media library source path to scan for artist.yml files. "
+        "Repeat for multiple paths (default: /data/Music and /data/MusicOther)",
+    )
+    args = parser.parse_args()
 
-    files_yaml_path = "../../out/files.yml"
+    files_yaml_path = args.files_yaml_path
 
     # TODO: Read source paths from config
     artist_yaml_paths: list[str] = []
-    SOURCE_PATHS = ["/data/Music", "/data/MusicOther"]
-    for source_path in SOURCE_PATHS:
+    source_paths = (
+        args.source_paths if args.source_paths else ["/data/Music", "/data/MusicOther"]
+    )
+    for source_path in source_paths:
         for root, _, files in os.walk(source_path):
             for f in files:
                 if f == "artist.yml":

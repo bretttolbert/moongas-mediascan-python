@@ -1,12 +1,12 @@
+import argparse
 import logging
 import os
-import sys
 from typing import Set, Tuple, cast
 
-from matplotlib import pyplot as plt
-from matplotlib.axes import Axes
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
+from matplotlib.axes import Axes
 
 from mediascan.media_file_data import MediaFileData
 from mediascan.media_files_yaml_file_loader import load_media_files_yaml_file
@@ -154,20 +154,22 @@ def print_covers_by_size(files: list[MediaFileData]):
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: {0} <files yaml file>".format(sys.argv[0]))
-    else:
-        files_yaml_file = load_media_files_yaml_file(sys.argv[1])
-        files = files_yaml_file.files
-        # print_covers_by_size(files)
-        # print_genre_counts(files)
-        # print_genres(files)
-        # plt_year_counts(files)
-        plt_genre_counts(files, 20)
-        # plt_file_sizes(files)
-        # plt_file_durations(files)
-        # plt_year_vs_duration(files)
-        plt.show()  # type: ignore
+    parser = argparse.ArgumentParser(
+        description="Calculates statistics from a media files YAML file."
+    )
+    parser.add_argument("files_yaml_file", help="Path to the files YAML file")
+    args = parser.parse_args()
+    files_yaml_file = load_media_files_yaml_file(args.files_yaml_file)
+    files = files_yaml_file.files
+    # print_covers_by_size(files)
+    # print_genre_counts(files)
+    # print_genres(files)
+    # plt_year_counts(files)
+    plt_genre_counts(files, 20)
+    # plt_file_sizes(files)
+    # plt_file_durations(files)
+    # plt_year_vs_duration(files)
+    plt.show()  # type: ignore
 
 
 if __name__ == "__main__":

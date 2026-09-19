@@ -1,3 +1,4 @@
+import argparse
 import os
 import shlex
 import subprocess
@@ -60,9 +61,40 @@ def concat_videos(
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Creates a video from album cover images using ffmpeg."
+    )
+    parser.add_argument(
+        "--source-root",
+        default="/data/CoversFlatDir/",
+        help="Directory containing the cover images (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--source-ext",
+        default=".jpg",
+        help="Cover image file extension (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--dest-filename",
+        default="covers.mp4",
+        help="Output video filename (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--frame-rate",
+        type=int,
+        default=10,
+        help="Frames per second of the output video (default: %(default)s)",
+    )
+    args = parser.parse_args()
+
     # assumes you've ran copy_covers with SingleDirectory
     # make_warning_video()
-    make_covers_video(source_root="/data/CoversFlatDir/")
+    make_covers_video(
+        source_root=args.source_root,
+        source_ext=args.source_ext,
+        dest_filename=args.dest_filename,
+        frame_rate=args.frame_rate,
+    )
     # concat_videos()
 
 

@@ -1,6 +1,6 @@
+import argparse
 import os
 from pathlib import Path
-import sys
 from typing import Mapping, Union, cast
 
 import pandas as pd
@@ -194,10 +194,15 @@ def read_csv_file(csv_filepath: Path):
 
 
 def main():
-    if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <path to folder containing artist data CSVs>")
-        sys.exit(1)
-    csv_path = sys.argv[1]
+    parser = argparse.ArgumentParser(
+        description="Generates artist.yml files from artist data CSV files."
+    )
+    parser.add_argument(
+        "csv_path",
+        help="Path to a folder containing artist data CSV files, or a single CSV file",
+    )
+    args = parser.parse_args()
+    csv_path = args.csv_path
 
     tot_file_write_count = 0
     tot_file_overwrite_count = 0

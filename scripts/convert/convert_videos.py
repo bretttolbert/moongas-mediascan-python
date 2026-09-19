@@ -1,7 +1,7 @@
+import argparse
 import os
 import subprocess
 from pathlib import Path
-
 
 """
 Script to batch convert video from one format (e.g. wmv) to mp4 (x264) (in place),
@@ -64,28 +64,58 @@ def convert_all(
 
 
 def main():
-    # default config:
-    OUTPUT_FMTS = ["h264.mp4"]
-    SOURCE_ROOT = "/videos"
-    SOURCE_EXT = ".wmv"
-    OVERWRITE = False
-    DELETE_SOURCE_FILES = True
-    DRY_RUN = False
+    parser = argparse.ArgumentParser(
+        description="Batch converts videos from one format (e.g. wmv) to mp4 (x264) in place."
+    )
+    parser.add_argument(
+        "--source-root",
+        default="/videos",
+        help="Root directory to recursively search for source videos (default: /videos)",
+    )
+    parser.add_argument(
+        "--source-ext",
+        default=".wmv",
+        help="Source file extension to convert (default: .wmv)",
+    )
+    parser.add_argument(
+        "--output-fmt",
+        dest="output_fmts",
+        action="append",
+        help="Destination format(s), e.g. h264.mp4. Repeat for multiple formats (default: h264.mp4)",
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Overwrite existing destination files",
+    )
+    parser.add_argument(
+        "--keep-source-files",
+        action="store_true",
+        help="Do not delete source files after conversion",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print what would be converted without converting",
+    )
+    args = parser.parse_args()
 
-    for dest_fmt in OUTPUT_FMTS:
+    output_fmts = args.output_fmts if args.output_fmts else ["h264.mp4"]
+
+    for dest_fmt in output_fmts:
         # recommend a fixed-height resolution with a variable width
         # consider square flags like Switzerland
         # if we matched the width, it would look out of proportion
-        source_path = Path(f"{SOURCE_ROOT}/")
+        source_path = Path(f"{args.source_root}/")
         dest_ext = f".{dest_fmt}"
         # convert in place folder), then delete original
         count = convert_all(
             source_root=source_path.resolve(),
-            source_ext=SOURCE_EXT,
+            source_ext=args.source_ext,
             dest_ext=dest_ext,
-            delete_source_file=DELETE_SOURCE_FILES,
-            overwrite=OVERWRITE,
-            dry_run=DRY_RUN,
+            delete_source_file=not args.keep_source_files,
+            overwrite=args.overwrite,
+            dry_run=args.dry_run,
         )
         print(f"converted {count} videos")
 

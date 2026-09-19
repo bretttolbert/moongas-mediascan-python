@@ -11,7 +11,7 @@ if not os.environ.get("OPENAI_API_KEY"):
         allow_module_level=True,
     )
 
-import scripts.artist_yaml_auto_populate as auto_populate
+import scripts.artist.artist_yaml.artist_yaml_auto_populate as auto_populate
 
 
 @pytest.mark.parametrize(("value", "expected"), [("true", True), ("false", False)])

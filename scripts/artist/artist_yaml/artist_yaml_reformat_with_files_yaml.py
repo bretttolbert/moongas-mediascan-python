@@ -2,6 +2,7 @@
 Batch modify artist.yml files to make changes to the yaml format
 """
 
+import argparse
 from pathlib import Path
 
 from mediascan.artist_yaml_file_loader import load_artist_yaml_file
@@ -52,7 +53,21 @@ def excluded(path: Path):
 
 
 def main():
-    files_yaml_path = Path("../../out/files.yml")
+    parser = argparse.ArgumentParser(
+        description="Batch modifies artist.yml files to make changes to the yaml format."
+    )
+    parser.add_argument(
+        "--files-yaml-path",
+        default="../../out/files.yml",
+        help="Path to the files YAML file (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--reformat-all",
+        action="store_true",
+        help="Reformat all artist.yml files, not just those matching the built-in rules",
+    )
+    args = parser.parse_args()
+    files_yaml_path = Path(args.files_yaml_path)
     files = load_media_files_yaml_file(files_yaml_path)
     artist_paths: dict[str, Path] = {}
     for file in files.files:
@@ -74,7 +89,7 @@ def main():
             # convert yaml (if applicable)
             try:
                 adf = load_artist_yaml_file(artist_yaml_path)
-                reformat_applicable = REFORMAT_ALL
+                reformat_applicable = REFORMAT_ALL or args.reformat_all
 
                 if (
                     adf.artist_data.country_code == "GB"

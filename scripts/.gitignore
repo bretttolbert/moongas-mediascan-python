@@ -1,0 +1,2 @@
+# Ignore all counts JSON files
+**/*counts*.json

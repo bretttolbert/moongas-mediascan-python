@@ -575,7 +575,7 @@ def main_loop(sleep_between_files: int, llm_enabled: bool = True):
                 time.sleep(1)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(
         description="Process artist YAML files or clean up backup files."
     )
@@ -606,3 +606,7 @@ if __name__ == "__main__":
             main_loop(args.sleep, args.llm)
         except KeyboardInterrupt:
             logger.info("Interrupted by user; exiting")
+
+
+if __name__ == "__main__":
+    main()
