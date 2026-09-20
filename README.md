@@ -33,7 +33,8 @@ pip install "git+https://github.com/bretttolbert/moongas-mediascan-python.git[st
 ### (Developer) Clone GitHub repo and install (editable)
 
 ```bash
-git clone git@github.com:bretttolbert/moongas-mediascan-python.git && cd moongas-mediascan-python
+git clone git@github.com:bretttolbert/moongas-mediascan-python.git
+cd moongas-mediascan-python
 python -m pip install -e ".[dev,llm,stats]"
 ```
 
