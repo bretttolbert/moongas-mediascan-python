@@ -40,6 +40,8 @@ def create_script_symlinks(dest_dir: Path):
                 continue
             dest.symlink_to(shell_script)
             print(f"  {dest.name} -> {shell_script}")
+    else:
+        print(f"  warning: shell script directory not found: {shell_dir}")
 
 
 def list_media_scripts():

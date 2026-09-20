@@ -95,6 +95,7 @@ Changelog = "https://github.com/bretttolbert/moongas-py-mediascan/blob/master/CH
 
 [tool.setuptools.package-data]
 mediascan = ['py.typed']
+scripts = ['shell/*.sh']
 
 [tool.setuptools.packages.find]
 where = ["src", "."]
