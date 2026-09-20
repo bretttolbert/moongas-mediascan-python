@@ -1,10 +1,10 @@
 #!/bin/bash
 set -euo pipefail
-./run-mediascan-scanfilesyaml
-./run-mediascan-scanartistsyaml
-./run-mediascan-scantodb
-./upload-mediascandb
+./run-scan-to-files-yaml-yaml
+./run-scan-to-artists-yaml-yaml
+./run-scan-to-db
+./upload-scan-to-db
 ./update-covers
 ./upload-covers
-./restart-remote-mediaserver
-sudo ./restart-local-mediaserver
+./restart-remote-services
+sudo ./restart-local-services

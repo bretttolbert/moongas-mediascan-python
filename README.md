@@ -16,7 +16,7 @@
 - [moongas-collection-demo](https://github.com/bretttolbert/moongas-collection-demo) [![CI](https://github.com/bretttolbert/moongas-collection-demo/actions/workflows/ci.yml/badge.svg)](https://github.com/bretttolbert/moongas-collection-demo/actions/workflows/ci.yml) - Example Moongas media collection (metadata only)
 - [moongas-mediatunes-web-vue](https://github.com/bretttolbert/moongas-mediatunes-web-vue) [![CI](https://github.com/bretttolbert/moongas-mediatunes-web-vue/actions/workflows/ci.yml/badge.svg)](https://github.com/bretttolbert/moongas-mediatunes-web-vue/actions/workflows/ci.yml) - A Deno-tooled TypeScript/Vue SPA for Moongas hybrid media collections, pairing with the separate moongas-mediatunes-svc-python-blacksheep backend to seemlessly blend offline and streaming playback
 - [moongas-mediatunes-svc-python-blacksheep](https://github.com/bretttolbert/moongas-mediatunes-svc-python-blacksheep) [![CI](https://github.com/bretttolbert/moongas-mediatunes-svc-python-blacksheep/actions/workflows/ci.yml/badge.svg)](https://github.com/bretttolbert/moongas-mediatunes-svc-python-blacksheep/actions/workflows/ci.yml) - Python+BlackSheep API service for Moongas hybrid media collections—backend for Moongas mediatunes web application (moongas-mediatunes-web-vue)
-- [moongas-mediascan-golang](https://github.com/bretttolbert/moongas-mediascan-golang) [![CI](https://github.com/bretttolbert/moongas-mediascan-golang/actions/workflows/ci.yml/badge.svg)](https://github.com/bretttolbert/moongas-mediascan-golang/actions/workflows/ci.yml) - Golang module to scan media collections and Moongas Yaml metatadata, outputs Moongas database
+- [moongas-mediascan-go](https://github.com/bretttolbert/moongas-mediascan-go) [![CI](https://github.com/bretttolbert/moongas-mediascan-go/actions/workflows/ci.yml/badge.svg)](https://github.com/bretttolbert/moongas-mediascan-go/actions/workflows/ci.yml) - Golang module to scan media collections and Moongas Yaml metatadata, outputs Moongas database
 - [moongas-mediascan-python](https://github.com/bretttolbert/moongas-mediascan-python) [![CI](https://github.com/bretttolbert/moongas-mediascan-python/actions/workflows/ci.yml/badge.svg)](https://github.com/bretttolbert/moongas-mediascan-python/actions/workflows/ci.yml) - Python package for loading Moongas database and Yaml
 - [moongas-mediatest-python-pytest](https://github.com/bretttolbert/moongas-mediatest-python-pytest) [![CI](https://github.com/bretttolbert/moongas-mediatest-python-pytest/actions/workflows/ci.yml/badge.svg)](https://github.com/bretttolbert/moongas-mediatest-python-pytest/actions/workflows/ci.yml) - Python tool for enforcing media collection rules (implemented with `pytest`)
 
@@ -49,6 +49,17 @@ This Python package includes various console scripts for working with Moongas me
 
 
 ```bash
+$ mediascripts --h
+usage: mediascripts [-h] [--list] [--create-script-symlinks]
+
+Utility for media* console script entry points.
+
+options:
+  -h, --help            show this help message and exit
+  --list                list all media* console script entry points, grouped by scripts subdirectory
+  --create-script-symlinks
+                        create hyphenated symlinks in the current directory to every console entry script and every shell script in
+                        scripts/shell
 $ mediascripts --list
 artist:
   artist-countries-to-mapgraph-json
@@ -71,5 +82,6 @@ media_files_yaml:
 rename:
   rename-album-files
 stats:
+  genre-clusters
   mediastats
 ```
