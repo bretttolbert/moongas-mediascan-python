@@ -27,13 +27,13 @@
 # Quick Start
 
 ```bash
-pip install "git+https://github.com/bretttolbert/moongas-py-mediascan.git[stats]"
+pip install "git+https://github.com/bretttolbert/moongas-mediascan-python.git[stats]"
 ```
 
 ### (Developer) Clone GitHub repo and install (editable)
 
 ```bash
-git clone git@github.com:bretttolbert/moongas-py-mediascan.git && cd mediascan
+git clone git@github.com:bretttolbert/moongas-mediascan-python.git && cd mediascan
 python -m pip install -e ".[dev,llm,stats]"
 ```
 
