@@ -2,6 +2,6 @@
 
 set -euo pipefail
 
-echo "Setting active media collection to demo..."
-export MEDIA_COLLECTION_ROOTDIR=$MEDIA_COLLECTION_DEMO
-echo "Media collection rootdir is now set to: ${MEDIA_COLLECTION_ROOTDIR:-}"
+echo "Setting active Moongas media collection to demo..."
+export MOONGAS_COLLECTION_ROOTDIR=$MOONGAS_COLLECTION_DEMO
+echo "Moongas media collection rootdir is now set to: ${MOONGAS_COLLECTION_ROOTDIR:-}"

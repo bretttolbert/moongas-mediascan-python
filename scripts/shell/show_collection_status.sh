@@ -2,5 +2,5 @@
 
 set -euo pipefail
 
-echo "Showing collection status..."
-echo "Media collection rootdir: ${MEDIA_COLLECTION_ROOTDIR:-}"
+echo "Showing Moongas media collection status..."
+echo "Moongas media collection rootdir: ${MOONGAS_COLLECTION_ROOTDIR:-}"
