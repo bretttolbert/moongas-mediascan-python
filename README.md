@@ -49,7 +49,7 @@ This Python package includes various console scripts for working with Moongas me
 
 
 ```bash
-$ mediascripts
+$ mediascripts --list
 artist:
   artist-countries-to-mapgraph-json
   artist-csv-to-artist-yaml
