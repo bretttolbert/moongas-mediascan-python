@@ -87,11 +87,11 @@ llm = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/bretttolbert/moongas-py-mediascan"
-Documentation = "https://github.com/bretttolbert/moongas-py-mediascan"
-Repository = "https://github.com/bretttolbert/moongas-py-mediascan.git"
-"Bug Tracker" = "https://github.com/bretttolbert/moongas-py-mediascan/issues"
-Changelog = "https://github.com/bretttolbert/moongas-py-mediascan/blob/master/CHANGELOG.md"
+"Homepage" = "https://github.com/bretttolbert/moongas-mediascan-python"
+Documentation = "https://github.com/bretttolbert/moongas-mediascan-python"
+Repository = "https://github.com/bretttolbert/moongas-mediascan-python.git"
+"Bug Tracker" = "https://github.com/bretttolbert/moongas-mediascan-python/issues"
+Changelog = "https://github.com/bretttolbert/moongas-mediascan-python/blob/master/CHANGELOG.md"
 
 [tool.setuptools.package-data]
 mediascan = ['py.typed']
