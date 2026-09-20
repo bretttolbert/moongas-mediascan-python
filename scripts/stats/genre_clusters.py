@@ -1,7 +1,7 @@
-from sklearn.feature_extraction.text import (  # pyright: ignore[reportMissingImports]
-    TfidfVectorizer,
-)
-from sklearn.cluster import KMeans  # pyright: ignore[reportMissingImports]
+import argparse
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans
 
 from mediascan.genres import Genre
 
@@ -16,28 +16,46 @@ TODO: Research more advanced forms of genre classification and introduce
 genre tag-checking or auto-tagging feature.
 """
 
-# List of genres
-genres: list[str] = [str(genre) for genre in Genre]
 
-# Convert genres into numerical vectors using TF-IDF
-vectorizer = TfidfVectorizer(stop_words="english")
-X = vectorizer.fit_transform(genres)  # pyright: ignore[reportUnknownMemberType]
+def main():
+    parser = argparse.ArgumentParser(
+        description="Generates genre clusters based on genre names."
+    )
+    parser.add_argument(
+        "-n",
+        "--n-clusters",
+        type=int,
+        default=16,
+        help="number of KMeans clusters (default: %(default)s)",
+    )
+    args = parser.parse_args()
 
-N_CLUSTERS = 16
-# Fit the KMeans clustering algorithm
-kmeans = KMeans(n_clusters=16, random_state=42)
-kmeans.fit(X)
+    # List of genres
+    genres: list[str] = [str(genre) for genre in Genre]
 
-# Get the clusters assigned to each genre
-clusters = kmeans.labels_
+    # Convert genres into numerical vectors using TF-IDF
+    vectorizer = TfidfVectorizer(stop_words="english")
+    X = vectorizer.fit_transform(genres)  # pyright: ignore[reportUnknownMemberType]
 
-# Create a dictionary to map genres to their clusters
-clustered_genres: dict[int, list[str]] = {i: [] for i in range(N_CLUSTERS)}
-for genre, cluster in zip(genres, clusters):
-    clustered_genres[cluster].append(genre)
+    n_clusters: int = args.n_clusters
+    # Fit the KMeans clustering algorithm
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+    kmeans.fit(X)
 
-# Print the clustered genres
-for cluster, cluster_genres in clustered_genres.items():
-    print(f"Cluster {cluster}:")
-    print("[" + ", ".join([f"'{c}'" for c in cluster_genres]) + "]")
-    print()
+    # Get the clusters assigned to each genre
+    clusters = kmeans.labels_
+
+    # Create a dictionary to map genres to their clusters
+    clustered_genres: dict[int, list[str]] = {i: [] for i in range(n_clusters)}
+    for genre, cluster in zip(genres, clusters):
+        clustered_genres[cluster].append(genre)
+
+    # Print the clustered genres
+    for cluster, cluster_genres in clustered_genres.items():
+        print(f"Cluster {cluster}:")
+        print("[" + ", ".join([f"'{c}'" for c in cluster_genres]) + "]")
+        print()
+
+
+if __name__ == "__main__":
+    main()
