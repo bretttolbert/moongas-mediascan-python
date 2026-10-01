@@ -26,6 +26,23 @@
 - [Live Demo (hosted on bretttolbert.com)](https://bretttolbert.com/mediaserver)
 - [Live Demo (hosted on moongas.org)](https://moongas.org/mediaserver)
 
+```mermaid
+graph TD;
+    A[Start] --- B(Choose Frontend and Backend);
+    B --- C{Choose Backend};
+    C ---|Python| D[mediatunes-svc-python-blacksheep];
+    C ---|Java| E[mediatunes-svc-java-javalin];
+    B --- F{Choose Frontend};
+    F ---|Deno+Vue| G[mediatunes-web-vue];
+    F ---|TBD| H[tbd];
+    D ---|has dependency| I[mediascan-python];
+    I ---|loads| J[mediascan.db];
+    J ---|generates| K[mediascan-go];
+    E ---|loads| J[mediascan.db];
+    J ---|validates| L[mediatest-python-pytest];
+    J ---|reads readonly| M[mediascripts-python];
+```
+
 # Quick Start
 
 ```bash
